@@ -1,4 +1,0 @@
-Backlog :
-
-16/11/2017 : obtention du compte développeur -> premier test de connexion et d'affichage de messages sur la console;
-(~45min)
