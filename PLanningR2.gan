@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><project name="Untitled Gantt Project" company="" webLink="http://" view-date="2017-10-01" view-index="0" gantt-divider-location="319" resource-divider-location="300" version="2.8.5" locale="fr_FR">
+    <description/>
+    <view zooming-state="default:8" id="gantt-chart">
+        <field id="tpd3" name="Nom" width="188" order="0"/>
+        <field id="tpd4" name="Date de début" width="59" order="1"/>
+        <field id="tpd5" name="Date de fin" width="68" order="2"/>
+        <option id="color.recent"><![CDATA[#000000 #ffff00 #66ff33 #9999ff #e1e1e1 #ff0000]]></option>
+    </view>
+    <view id="resource-table">
+        <field id="0" name="Nom" width="210" order="0"/>
+        <field id="1" name="Rôle par défaut" width="86" order="1"/>
+    </view>
+    <!-- -->
+    <calendars>
+        <day-types>
+            <day-type id="0"/>
+            <day-type id="1"/>
+            <default-week id="1" name="default" sun="1" mon="0" tue="0" wed="0" thu="0" fri="0" sat="1"/>
+            <only-show-weekends value="false"/>
+            <overriden-day-types/>
+            <days/>
+        </day-types>
+        <date year="2017" month="12" date="10" type="WORKING_DAY"><![CDATA[Exception de week-end]]></date>
+    </calendars>
+    <tasks empty-milestones="true">
+        <taskproperties>
+            <taskproperty id="tpd0" name="type" type="default" valuetype="icon"/>
+            <taskproperty id="tpd1" name="priority" type="default" valuetype="icon"/>
+            <taskproperty id="tpd2" name="info" type="default" valuetype="icon"/>
+            <taskproperty id="tpd3" name="name" type="default" valuetype="text"/>
+            <taskproperty id="tpd4" name="begindate" type="default" valuetype="date"/>
+            <taskproperty id="tpd5" name="enddate" type="default" valuetype="date"/>
+            <taskproperty id="tpd6" name="duration" type="default" valuetype="int"/>
+            <taskproperty id="tpd7" name="completion" type="default" valuetype="int"/>
+            <taskproperty id="tpd8" name="coordinator" type="default" valuetype="text"/>
+            <taskproperty id="tpd9" name="predecessorsr" type="default" valuetype="text"/>
+        </taskproperties>
+        <task id="0" name="Recherches préliminaires" color="#8cb6ce" shape="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" meeting="false" start="2017-10-24" duration="17" complete="0" expand="true">
+            <depend id="9" type="2" difference="0" hardness="Strong"/>
+            <depend id="22" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="5" name="Etat de l'art" color="#ffff00" shape="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" meeting="false" start="2017-10-30" duration="34" complete="0" priority="2" expand="true"/>
+        <task id="3" name="R1" color="#000000" meeting="true" start="2017-11-08" duration="0" complete="0" expand="true"/>
+        <task id="9" name="Node.js : Messages" color="#66ff33" meeting="false" start="2017-11-16" duration="19" complete="0" expand="true">
+            <depend id="10" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="22" name="Choix de l'antenne" color="#8cb6ce" meeting="false" start="2017-11-16" duration="8" complete="0" expand="true">
+            <depend id="23" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="23" name="Commande de l'antenne" color="#8cb6ce" meeting="false" start="2017-11-28" duration="7" complete="0" expand="true">
+            <depend id="24" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="24" name="Retard de l'antenne" color="#ff0000" meeting="false" start="2017-12-07" duration="3" complete="0" expand="true">
+            <depend id="41" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="41" name="Formation et soudure" color="#ff0000" meeting="false" start="2017-12-11" duration="5" complete="0" expand="true">
+            <depend id="54" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="10" name="Node.js : base de donnés" color="#66ff33" meeting="false" start="2017-12-12" duration="6" complete="0" expand="true">
+            <depend id="55" type="2" difference="0" hardness="Strong"/>
+            <depend id="57" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="54" name="Activation Sigfox" color="#8cb6ce" meeting="false" start="2017-12-18" duration="3" complete="0" expand="true">
+            <depend id="55" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="57" name="Statistiques disponibles" color="#9999ff" meeting="false" start="2017-12-20" duration="28" complete="0" priority="0" expand="true">
+            <depend id="95" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="55" name="Node.js : traitement Sigfox" color="#66ff33" meeting="false" start="2017-12-21" duration="14" complete="0" expand="true">
+            <depend id="56" type="2" difference="0" hardness="Strong"/>
+            <depend id="90" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="20" name="R2" color="#000000" meeting="true" start="2017-12-22" duration="0" complete="0" expand="true"/>
+        <task id="56" name="Passerelle test" color="#ffff00" meeting="false" start="2018-01-10" duration="7" complete="0" expand="true">
+            <depend id="74" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="90" name="Alarme fonctionelle" color="#9999ff" meeting="false" start="2018-01-10" duration="21" complete="0" expand="true">
+            <depend id="95" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="74" name="Passerelle fonctionelle" color="#ffff00" meeting="false" start="2018-01-19" duration="12" complete="0" expand="true">
+            <depend id="95" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="67" name="R3" color="#000000" meeting="true" start="2018-01-26" duration="0" complete="0" expand="true"/>
+        <task id="95" name="Node.js : Bot complet" color="#66ff33" meeting="false" start="2018-02-08" duration="14" complete="0" expand="true">
+            <depend id="100" type="2" difference="0" hardness="Strong"/>
+        </task>
+        <task id="100" name="Passerelle complète" color="#ffff00" meeting="false" start="2018-02-28" duration="5" complete="0" expand="true"/>
+        <task id="106" name="R4" color="#000000" meeting="true" start="2018-03-16" duration="0" complete="0" expand="true"/>
+    </tasks>
+    <resources/>
+    <allocations/>
+    <vacations/>
+    <previous/>
+    <roles roleset-name="Default"/>
+</project>
