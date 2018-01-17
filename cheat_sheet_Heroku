@@ -1,0 +1,38 @@
+memo sigfox
+
+
+
+$ git clone https://github.com/elisascheer/Passerelle-Rainbow-Sigfox
+$ cd Passerelle-Rainbow-Sigfox
+$ heroku apps:create your app
+$ heroku addons:create heroku-postgresql:hobby-dev
+$ heroku git:remote -a yourapp
+$ git push heroku master
+$ heroku ps:scale web=1
+$ heroku logs --tail
+
+
+
+si problème avec le git push
+
+$ touch readme
+
+$ git add .
+
+$ git commit -m "init"
+
+$ git push heroku master
+
+ pour suppr toutes les app :
+
+for app in $(heroku apps); do heroku apps:destroy --app $app --confirm $app; done
+
+
+variables environnements :
+
+heroku config:set PASS=Sigfox2*
+heroku config:set LOG=enzotravail@laposte.net
+
+
+pour regarder la bdd :
+heroku pg:psql -a yourapp
