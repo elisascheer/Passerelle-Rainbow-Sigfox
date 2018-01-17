@@ -6,6 +6,7 @@ var conString = process.env.DATABASE_URL;
 var client = new pg.Client(conString);
 client.connect();
 
+
 app.post("/", function(req, res) { 
 	client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data varchar(24))");
 	console.log("POST");
@@ -13,17 +14,16 @@ app.post("/", function(req, res) {
 	req.on('data', function (data) {
             body += data;
             console.log("Partial body: " + body);
-            //res.send("data received\n")
     });
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
             console.log("ID : " +jsonObj.device);
             console.log("Payload: " +jsonObj.data);
-            res.send("Data saved in the database successfully!\n")
+            res.send("Data saved in the database successfully!\n");
+            res.end();
+
     });
-    //res.send();
-    //res.end();
 });
 var port = process.env.PORT || 5000;
 app.listen(port, function() {
@@ -32,7 +32,7 @@ app.listen(port, function() {
 
 let options = {
     "rainbow": {
-        "host": "sandbox",                      // Can be "sandbox" (developer platform), "official" or any other hostname when using dedicated AIO
+        "host": "sandbox",                      
     },
     "credentials": {
         "login": process.env.LOG,  // The Rainbow email account to use
@@ -63,7 +63,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             query.on("end", function (result) {
                 messageSent = rainbowSDK.im.sendMessageToJid(JSON.stringify(result.rows, null, "    "), message.fromJid);
                 console.log(JSON.stringify(result.rows, null, "    "));
-                client.end();
+                //client.end();
             });
         }
         else {
