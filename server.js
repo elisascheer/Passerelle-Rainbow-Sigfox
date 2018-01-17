@@ -20,7 +20,9 @@ app.post("/", function(req, res) {
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
             console.log("ID : " +jsonObj.device);
             console.log("Payload: " +jsonObj.data);
-            res.send("Data saved in the database successfully!\n")
+            res.send("Data saved in the database successfully!\n");
+            res.end();
+
     });
 });
 var port = process.env.PORT || 5000;
