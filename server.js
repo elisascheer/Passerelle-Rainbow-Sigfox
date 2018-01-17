@@ -14,7 +14,6 @@ app.post("/", function(req, res) {
 	req.on('data', function (data) {
             body += data;
             console.log("Partial body: " + body);
-            //res.send("data received\n")
     });
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
@@ -23,8 +22,6 @@ app.post("/", function(req, res) {
             console.log("Payload: " +jsonObj.data);
             res.send("Data saved in the database successfully!\n")
     });
-    //res.send();
-    //res.end();
 });
 var port = process.env.PORT || 5000;
 app.listen(port, function() {
