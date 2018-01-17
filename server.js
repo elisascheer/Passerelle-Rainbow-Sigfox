@@ -18,7 +18,6 @@ app.post("/", function(req, res) {
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
-            client.end();
             console.log("ID : " +jsonObj.device);
             console.log("Payload: " +jsonObj.data);
             res.send("Data saved in the database successfully!\n");
@@ -64,7 +63,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             query.on("end", function (result) {
                 messageSent = rainbowSDK.im.sendMessageToJid(JSON.stringify(result.rows, null, "    "), message.fromJid);
                 console.log(JSON.stringify(result.rows, null, "    "));
-                client.end();
+                //client.end();
             });
         }
         else {
