@@ -6,6 +6,7 @@ var conString = process.env.DATABASE_URL;
 var client = new pg.Client(conString);
 client.connect();
 
+
 app.post("/", function(req, res) { 
 	client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data varchar(24))");
 	console.log("POST");
