@@ -63,7 +63,6 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             query.on("end", function (result) {
                 messageSent = rainbowSDK.im.sendMessageToJid(JSON.stringify(result.rows, null, "    "), message.fromJid);
                 console.log(JSON.stringify(result.rows, null, "    "));
-                //client.end();
             });
         }
         else {
