@@ -53,7 +53,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     var chaine=message.content;
     if(message.type == "chat") {
         // Send the answer to the bubble
-        //console.log("un client fait une demande");
+        console.log("Message : "+message.content);
         if(chaine=="temp"){
             var query = client.query("SELECT data,date FROM temperature ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
             query.on("row", function (row, result) {
