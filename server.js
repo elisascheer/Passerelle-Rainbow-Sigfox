@@ -39,7 +39,7 @@ let options = {
         "password": process.env.PASS,  // The Rainbow associated password to use
     },
     "logs": {
-        "enableConsoleLogs": true,              // Default: true
+        "enableConsoleLogs": false,              // Default: true
         "enableFileLogs": false,                // Default: false
        
     },
