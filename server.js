@@ -75,7 +75,6 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 messageSent = rainbowSDK.im.sendMessageToJid("The temperature is "+ result.rows[0].data + "°C", message.fromJid);
             });
         }
-
         /*else if(chaine.indexOf("link")==0){ //si on entre la commande link
             //link ID name
             var split=chaine.split(" ");
