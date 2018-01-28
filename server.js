@@ -76,7 +76,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             });
         }
 
-        else if(chaine.indexOf("link")==0){ //si on entre la commande link
+        /*else if(chaine.indexOf("link")==0){ //si on entre la commande link
             //link ID name
             var split=chaine.split(" ");
             if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <name>", message.fromJid);
@@ -99,7 +99,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             //console.log(split);
 
 
-        }
+        }*/
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("This is not a command", message.fromJid);
         }
