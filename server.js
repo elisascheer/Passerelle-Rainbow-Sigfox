@@ -61,13 +61,12 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             result.addRow(row);
             });
             query.on("end", function (result) {
-                messageSent = rainbowSDK.im.sendMessageToJid(JSON.stringify(result.rows, null, "    "), message.fromJid);
-                console.log(JSON.stringify(result.rows, null, "    "));
-                //client.end();
+                //console.log(result.rows[0].data);
+                messageSent = rainbowSDK.im.sendMessageToJid("The temperature is "+ result.rows[0].data + "°C", message.fromJid);
             });
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Ceci n'est pas une commande", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("This is not a command", message.fromJid);
         }
     }
     else {
