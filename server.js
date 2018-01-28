@@ -54,17 +54,17 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
-        client.query("CREATE TABLE IF NOT EXISTS doctors(id serial primary key,jid varchar(300))");
-        var req=client.query("SELECT * from doctors where jid='"+message.fromJid+"'");
+        //client.query("CREATE TABLE IF NOT EXISTS doctors(id serial primary key,jid varchar(300))");
+        //var req=client.query("SELECT * from doctors where jid='"+message.fromJid+"'");
         //console.log(is_null(req));
-        req.on("row",function(row,result){
+        /*req.on("row",function(row,result){
             result.addRow(row);
         });
         req.on("end",function(result){
            if(result.rows.length==0){
             client.query("insert into doctors(jid) values($1)",[message.fromJid]);
            }
-        });
+        });*/
         if(chaine=="temp"){
             var query = client.query("SELECT data,date FROM temperature ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
             query.on("row", function (row, result) {
