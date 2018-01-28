@@ -28,7 +28,7 @@ app.listen(port, function() {
     console.log("Listening on " + port);
 });
 
-/*let options = {
+let options = {
     "rainbow": {
         "host": "sandbox",                      // Can be "sandbox" (developer platform), "official" or any other hostname when using dedicated AIO
     },
@@ -111,4 +111,4 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
 });
 
 // Start the SDK
-rainbowSDK.start();*/
+rainbowSDK.start();
