@@ -54,7 +54,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     // test if the message comes from a bubble of from a conversation with one participant
     if(message.type == "chat") {
         // Send the answer to the bubble
-        console.log("un client fait une demande");
+        //console.log("un client fait une demande");
         if(message.content=="temp"){
             var query = client.query("SELECT data,date FROM temperature ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
             query.on("row", function (row, result) {
