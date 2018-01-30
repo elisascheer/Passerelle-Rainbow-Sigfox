@@ -8,6 +8,10 @@ client.connect();
 
 
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data varchar(24))");
+client.query("create table if not exists patients(id varchar primary key,name varchar)");
+client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
+client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
+client.query("insert into patients(id,name) values('1B3EFC','Durand')");
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -18,6 +22,17 @@ app.post("/", function(req, res) {
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
+            client.query("create table if not exists table_id(id serial primary key,device varchar(10))");
+            var req=client.query("SELECT * from table_id where device='"+jsonObj.device+"'");
+            //console.log(is_null(req));
+            req.on("row",function(row,result){
+                result.addRow(row);
+            });
+            req.on("end",function(result){
+                if(result.rows.length==0){
+                    client.query("insert into table_id(device) values($1)",[jsonObj.device]);
+                }
+            });
             //console.log("ID : " +jsonObj.device);
             //console.log("Payload: " +jsonObj.data);
             res.send("Data saved in the database successfully!\n")
@@ -54,7 +69,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
-        client.query("CREATE TABLE IF NOT EXISTS doctors(id serial primary key,jid varchar(300))");
+        client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
         var req=client.query("SELECT * from doctors where jid='"+message.fromJid+"'");
         //console.log(is_null(req));
         req.on("row",function(row,result){
@@ -81,24 +96,36 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             var split=chaine.split(" ");
             if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <name>", message.fromJid);
             else {
-                client.query("CREATE TABLE IF NOT EXISTS patients(id serial primary key,link int,name varchar(24),constraint fk foreign key (link) references doctors(id))");
-                console.log("Associer un patient à un médecin\n");
-                var id_doc=client.query("select id from doctors where jid='"+message.fromJid+"'");
-                req.on("row",function(row,result){
+                var search_name=client.query("select * from patients where name='"+split[1]+"'");
+                search_name.on("row",function(row,result){
                     result.addRow(row);
                 });
-                req.on("end",function(result){
-                    console.log(result.rows[1].id);
-                    client.query("INSERT INTO patients(name,link) VALUES ($1,$2)",[split[1],result.rows[1].id]);
+                search_name.on("end",function(result){
+                    if(result.rows.length!=0){
+                        client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
+                        console.log("Associer un patient à un médecin\n");
+                        var id_doc=client.query("select * from doctors where jid='"+message.fromJid+"'");
+                        id_doc.on("row",function(row,result){
+                            result.addRow(row);
+                        });
+                        id_doc.on("end",function(result){
+                        if(result.rows.length==1){
+                            var id_patient=client.query("select id from patients where name='"+split[1]+"'");
+                            id_patient.on("row",function(row,result){
+                            result.addRow(row);
+                        });
+                        id_patient.on("end",function(result){
+                            var patient=result.rows[0].id;
+                            console.log(patient);
+                            client.query("insert into link(jid,id_patients) values ($1,$2)",[message.fromJid,patient]);
+                        });
+                    }
+                });
+                    }
                 });
 
             }
             console.log(message.fromJid);
-
-            //messageSent = rainbowSDK.im.sendMessageToJid("Nouveau patient bien enregistré!", message.fromJid);
-            //console.log(split);
-
-
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("This is not a command", message.fromJid);
