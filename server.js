@@ -10,9 +10,9 @@ client.connect();
 
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data varchar(24))");
 client.query("create table if not exists patients(id varchar primary key,name varchar)");
-client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
-client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
-client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
+//client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
+//client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
+//client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -100,7 +100,54 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 });
             }
         }
+        else if(chaine.indexOf("stats")==0){
+            var arg=chaine.split(" ");
+            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("You must specify a name", message.fromJid);
+            if(arg.length==3){
+                var req=client.query("select * from link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device where patients.name='"+arg[1]+"'");
+                req.on("row", function (row, result) {
+                    result.addRow(row);
+                });
+                req.on("end", function (result) {
+                    if(result.rows.length!=0){
+                        var mean=0;
+                        if(arg[2]=="mean"){
+                            for(i=0;i<result.rows.length;i++){
+                                mean=mean + parseInt(result.rows[i].data);
+                                console.log(result.rows[i].data);
+                            }
+                            mean=mean/result.rows.length;
+                            messageSent = rainbowSDK.im.sendMessageToJid("The mean temperature of "+arg[1]+" is "+mean+"°C", message.fromJid);                            
+                        }
+                        if(arg[2]=="all"){
+                            var variance=0;
+                            var  standard_deviation=0;
+                            for(i=0;i<result.rows.length;i++){
+                                mean=mean + parseInt(result.rows[i].data);
+                            }
+                            mean=mean/result.rows.length;
+                            for(i=0;i<result.rows.length;i++){
+                                variance=variance + (parseInt(result.rows[i].data)-mean)*(parseInt(result.rows[i].data)-mean);
+                            }
+                            variance=variance/result.rows.length;
+                            standard_deviation=Math.sqrt(variance);
+                            console.log(variance);
+                            console.log(standard_deviation);
+                            messageSent = rainbowSDK.im.sendMessageToJid("Summary of statistics for "+arg[1]+" (rounded to the hundredth) :\nMean : "+mean.toFixed(2)+"°C\nVariance : "+variance.toFixed(2)+"°C\nStandard deviation : "+standard_deviation.toFixed(2)+"°C" , message.fromJid);
+                        }
 
+                        if(arg[3]=="plot"){
+                            //TO DO
+                        }
+                        else messageSent = rainbowSDK.im.sendMessageToJid("Options available : all,plot and mean", message.fromJid);
+                    }
+                    else {
+                        messageSent = rainbowSDK.im.sendMessageToJid("You don't have access to these data or no data have been registered yet", message.fromJid);
+                    }
+                });
+            }
+            else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <name> <options>", message.fromJid);    
+        }
         else if(chaine=="help"){
             messageSent = rainbowSDK.im.sendMessageToJid("temp <name>\nlink <name>\nlist", message.fromJid);
         }
@@ -117,7 +164,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 search_name.on("end",function(result){
                     if(result.rows.length!=0){
                         client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
-                        console.log("Associer un patient à un médecin\n");
+                        //console.log("Associer un patient à un médecin\n");
                         var id_doc=client.query("select * from doctors where jid='"+message.fromJid+"'");
                         id_doc.on("row",function(row,result){
                             result.addRow(row);
@@ -144,7 +191,6 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 });
 
             }
-            //console.log(message.fromJid);
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("This is not a command, enter the command help to see all the available commands", message.fromJid);
