@@ -8,7 +8,7 @@ client.connect();
 //select * from link JOIN temperature ON temperature.device=link.id_patients
 // JOIN patients ON patients.id=temperature.device where patients.name='Dubois';
 
-client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data varchar(24))");
+client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
 client.query("create table if not exists patients(id varchar primary key,name varchar)");
 //client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
 //client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
@@ -104,7 +104,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             var arg=chaine.split(" ");
             if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("You must specify a name", message.fromJid);
             if(arg.length==3){
-                var req=client.query("select * from link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device where patients.name='"+arg[1]+"'");
+                var req=client.query("select avg(data),variance(data),stddev(data) from (select * from link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device where patients.name='"+arg[1]+"') as stats");
                 req.on("row", function (row, result) {
                     result.addRow(row);
                 });
@@ -112,31 +112,13 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                     if(result.rows.length!=0){
                         var mean=0;
                         if(arg[2]=="mean"){
-                            for(i=0;i<result.rows.length;i++){
-                                mean=mean + parseInt(result.rows[i].data);
-                                console.log(result.rows[i].data);
-                            }
-                            mean=mean/result.rows.length;
-                            messageSent = rainbowSDK.im.sendMessageToJid("The mean temperature of "+arg[1]+" is "+mean+"°C", message.fromJid);                            
+                            messageSent = rainbowSDK.im.sendMessageToJid("The mean temperature of "+arg[1]+" is "+result.rows[0].avg+"°C", message.fromJid);                            
                         }
-                        if(arg[2]=="all"){
-                            var variance=0;
-                            var  standard_deviation=0;
-                            for(i=0;i<result.rows.length;i++){
-                                mean=mean + parseInt(result.rows[i].data);
-                            }
-                            mean=mean/result.rows.length;
-                            for(i=0;i<result.rows.length;i++){
-                                variance=variance + (parseInt(result.rows[i].data)-mean)*(parseInt(result.rows[i].data)-mean);
-                            }
-                            variance=variance/result.rows.length;
-                            standard_deviation=Math.sqrt(variance);
-                            console.log(variance);
-                            console.log(standard_deviation);
-                            messageSent = rainbowSDK.im.sendMessageToJid("Summary of statistics for "+arg[1]+" (rounded to the hundredth) :\nMean : "+mean.toFixed(2)+"°C\nVariance : "+variance.toFixed(2)+"°C\nStandard deviation : "+standard_deviation.toFixed(2)+"°C" , message.fromJid);
+                        else if(arg[2]=="all"){
+                            messageSent = rainbowSDK.im.sendMessageToJid("Summary of statistics for "+arg[1]+" :\nMean : "+result.rows[0].avg+"°C\nVariance : "+result.rows[0].variance+"°C\nStandard deviation : "+result.rows[0].stddev+"°C" , message.fromJid);
                         }
 
-                        if(arg[3]=="plot"){
+                        else if(arg[3]=="plot"){
                             //TO DO
                         }
                         else messageSent = rainbowSDK.im.sendMessageToJid("Options available : all,plot and mean", message.fromJid);
