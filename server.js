@@ -137,6 +137,41 @@ function link(split,message){
                 });    
 }
 
+function warning(split,message){
+                client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varchar,id_patients varchar,trigger float, constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
+                var search_name=client.query("SELECT id FROM patients WHERE name='"+split[1]+"'");
+                search_name.on("row",function(row,result){
+                    result.addRow(row);
+                });
+                search_name.on("end",function(result){
+                if(result.rows.length!=0){
+                        console.log("Mise en place d'une nouvelle alarme\n");
+                        var patient=result.rows[0].id;
+                        var trigger=parseFloat(split[2]);
+                        client.query("INSERT INTO warning(id_patients,trigger) VALUES ($1,$2)",[patient,trigger]); 
+                        messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid)
+                   
+                    }
+                    else {
+                        messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
+                    }
+                });
+
+}
+
+function list(message){
+    var search_patient=client.query("SELECT name FROM patients JOIN link ON patients.id=link.id_patients WHERE jid='"+message.fromJid+"'");
+    messageSent = rainbowSDK.im.sendMessageToJid("Your patients are : ", message.fromJid);
+    search_patient.on("row",function(row,result){
+        result.addRow(row);
+    });
+    search_patient.on("end",function(result){
+        for(i=0;i<result.rows.length;i++){
+            messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
+        }                 
+    });
+}
+
 // Instantiate the SDK
 let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
@@ -181,6 +216,16 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             else {
                 link(split,message);
             }
+        }
+        else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
+            var split=chaine.split(" ");
+            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <name> <trigger value>", message.fromJid);
+            else {
+                warning(split,message);
+            }
+        }
+        else if(chaine=="list"){
+            list(message);
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("This is not a command, enter the command help to see all the available commands", message.fromJid);
