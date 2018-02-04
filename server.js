@@ -8,6 +8,9 @@ client.connect();
 
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
 client.query("CREATE TABLE IF NOT EXISTS patients(id varchar primary key,name varchar)");
+client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
+client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
+client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varchar,id_patients varchar,trigger float, constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
 //client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
 //client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
 //client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
@@ -21,9 +24,6 @@ app.post("/", function(req, res) {
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
-            client.query("CREATE TABLE IF NOT EXISTS table_id(id serial primary key,device varchar(10))");
-            var req=client.query("SELECT * from table_id where device='"+jsonObj.device+"'");
-            //console.log(is_null(req));
             req.on("row",function(row,result){
                 result.addRow(row);
             });
@@ -32,8 +32,6 @@ app.post("/", function(req, res) {
                     client.query("INSERT INTO table_id(device) values($1)",[jsonObj.device]);
                 }
             });
-            //console.log("ID : " +jsonObj.device);
-            //console.log("Payload: " +jsonObj.data);
             res.send("Data saved in the database successfully!\n")
     });
 });
@@ -59,8 +57,6 @@ let options = {
         "sendReadReceipt": true   // True to send the 'read' receipt automatically
     }
 };
-
-
 
 function get_temperature(arg,message){
     var get_temp=client.query("SELECT * FROM link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device WHERE patients.name='"+arg[1]+"' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
@@ -105,70 +101,78 @@ function stats(arg,message){
 }
 
 function link(split,message){
-                var search_name=client.query("SELECT * FROM patients where name='"+split[1]+"'");
-                search_name.on("row",function(row,result){
-                    result.addRow(row);
-                });
-                search_name.on("end",function(result){
-                    if(result.rows.length!=0){
-                        client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
-                        //console.log("Associer un patient à un médecin\n");
-                        var id_doc=client.query("SELECT * FROM doctors where jid='"+message.fromJid+"'");
-                        id_doc.on("row",function(row,result){
+    var search_name=client.query("SELECT * FROM patients where name='"+split[1]+"'");
+    search_name.on("row",function(row,result){
+        result.addRow(row);
+    });
+    search_name.on("end",function(result){
+        if(result.rows.length!=0){
+            var id_doc=client.query("SELECT * FROM doctors where jid='"+message.fromJid+"'");
+            id_doc.on("row",function(row,result){
+                result.addRow(row);
+            });
+            id_doc.on("end",function(result){
+                if(result.rows.length==1){
+                    var id_patient=client.query("SELECT id FROM patients where name='"+split[1]+"'");
+                    id_patient.on("row",function(row,result){
+                        result.addRow(row);
+                    });
+                    id_patient.on("end",function(result){
+                        var patient=result.rows[0].id;
+                        //console.log(patient);
+                        var search_in_table=client.query("SELECT * FROM link WHERE jid='"+message.fromJid+"' AND id_patients='"+patient+"'");
+                        search_in_table.on("row",function(row,result){
                             result.addRow(row);
                         });
-                        id_doc.on("end",function(result){
-                            if(result.rows.length==1){
-                                var id_patient=client.query("SELECT id FROM patients where name='"+split[1]+"'");
-                                id_patient.on("row",function(row,result){
-                                result.addRow(row);
-                                });
-                                id_patient.on("end",function(result){
-                                var patient=result.rows[0].id;
-                                console.log(patient);
-                                client.query("INSERT INTO link(jid,id_patients) VALUES ($1,$2)",[message.fromJid,patient]);
-                                });
-                            }                    
-                });
-                    }
-                    else {
-                        messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
-                    }
-                });    
+                        search_in_table.on("end",function(result){
+                            if(result.rows.length==0) client.query("INSERT INTO link(jid,id_patients) VALUES ($1,$2)",[message.fromJid,patient]);
+                            else messageSent = rainbowSDK.im.sendMessageToJid("You're already linked to "+split[1]+" !", message.fromJid);
+                        });
+
+                    });
+                }                    
+            });
+        }
+        else {
+            messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
+        }
+    });    
 }
 
+
 function warning(split,message){
-                client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varchar,id_patients varchar,trigger float, constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
-                var search_name=client.query("SELECT id FROM patients WHERE name='"+split[1]+"'");
-                search_name.on("row",function(row,result){
-                    result.addRow(row);
-                });
-                search_name.on("end",function(result){
-                if(result.rows.length!=0){
-                        console.log("Mise en place d'une nouvelle alarme\n");
-                        var patient=result.rows[0].id;
-                        var trigger=parseFloat(split[2]);
-                        client.query("INSERT INTO warning(id_patients,trigger) VALUES ($1,$2)",[patient,trigger]); 
-                        messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid)
-                   
-                    }
-                    else {
-                        messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
-                    }
-                });
+    var search_name=client.query("SELECT id FROM patients WHERE name='"+split[1]+"'");
+    search_name.on("row",function(row,result){
+        result.addRow(row);
+    });
+    search_name.on("end",function(result){
+        if(result.rows.length!=0){
+            console.log("Mise en place d'une nouvelle alarme\n");
+            var patient=result.rows[0].id;
+            var trigger=parseFloat(split[2]);
+            client.query("INSERT INTO warning(id_patients,trigger) VALUES ($1,$2)",[patient,trigger]); 
+            messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid)       
+        }
+        else {
+            messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
+        }
+    });
 
 }
 
 function list(message){
     var search_patient=client.query("SELECT name FROM patients JOIN link ON patients.id=link.id_patients WHERE jid='"+message.fromJid+"'");
-    messageSent = rainbowSDK.im.sendMessageToJid("Your patients are : ", message.fromJid);
     search_patient.on("row",function(row,result){
         result.addRow(row);
     });
     search_patient.on("end",function(result){
-        for(i=0;i<result.rows.length;i++){
-            messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
-        }                 
+        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("You haven't declared any patient yet ", message.fromJid);
+        else {
+            messageSent = rainbowSDK.im.sendMessageToJid("Your patients are : ", message.fromJid);
+            for(i=0;i<result.rows.length;i++){
+                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
+        } 
+        }                
     });
 }
 
@@ -180,7 +184,6 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
-        client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
         var req=client.query("SELECT * from doctors WHERE jid='"+message.fromJid+"'");
         req.on("row",function(row,result){
             result.addRow(row);
