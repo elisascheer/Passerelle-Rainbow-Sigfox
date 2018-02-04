@@ -128,20 +128,17 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             console.log(message.fromJid);
         }
         else if(chaine.indexOf("list")==0){
-                var search_patient=client.query("select id_patients from link where jid='"+message.fromJid+"'");
+                //var search_patient=client.query("select id_patients from link where jid='"+message.fromJid+"'");
+                var search_patient=client.query("select name from patients join link on patients.id=link.id_patients where jid='"+message.fromJid+"'");
                 messageSent = rainbowSDK.im.sendMessageToJid("Your patients are ", message.fromJid);
                 search_patient.on("row",function(row,result){
                     result.addRow(row);
                 });
                 search_patient.on("end",function(result){
-                    //for(var i = 0; i<10; i++){
-                        //console.log(i);
-                        //messageSent = rainbowSDK.im.sendMessageToJid("hello world", message.fromJid);
-                        messageSent = rainbowSDK.im.sendMessageToJid(" : "+ result.rows[0].id_patients +"patients", message.fromJid);
-                    //}
-
+                    for(i=0;i<result.rows.length;i++){
+                        messageSent = rainbowSDK.im.sendMessageToJid(" : "+ result.rows[i].id_patients +"patients", message.fromJid);
+                    }                 
                 });
-                 //messageSent = rainbowSDK.im.sendMessageToJid("Your patients are ", message.fromJid);
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("This is not a command", message.fromJid);
