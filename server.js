@@ -135,7 +135,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 });
                 search_patient.on("end",function(result){
                     for(i=0;i<result.rows.length;i++){
-                        messageSent = rainbowSDK.im.sendMessageToJid(" : "+ result.rows[i].id_patients +"patients", message.fromJid);
+                        messageSent = rainbowSDK.im.sendMessageToJid(" : "+ result.rows[i].name +"patients", message.fromJid);
                     }                 
                 });
         }
