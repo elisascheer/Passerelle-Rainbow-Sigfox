@@ -127,17 +127,23 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             }
             console.log(message.fromJid);
         }
-        else if(chaine.indexOf("list")==0){
-                var search_patient=client.query("SELECT name FROM patients JOIN link ON patients.id=link.id_patients WHERE jid='"+message.fromJid+"'");
-                messageSent = rainbowSDK.im.sendMessageToJid("Your patients are ", message.fromJid);
+         else if(chaine.indexOf("list")==0){
+                //var search_patient=client.query("select id_patients from link where jid='"+message.fromJid+"'");
+                var search_patient=client.query("select name from patients join link on patients.id=link.id_patients where jid='"+message.fromJid+"'");
                 search_patient.on("row",function(row,result){
                     result.addRow(row);
                 });
                 search_patient.on("end",function(result){
-                    for(i=0;i<result.rows.length;i++){
-                        messageSent = rainbowSDK.im.sendMessageToJid(" : "+ result.rows[i].name +"patients", message.fromJid);
-                    }                 
+                    if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("You haven't declared any patient yet ", message.fromJid);
+                    else {
+                        messageSent = rainbowSDK.im.sendMessageToJid("Your patients are ", message.fromJid);
+                        for(i=0;i<result.rows.length;i++){
+                            messageSent = rainbowSDK.im.sendMessageToJid(" : "+ result.rows[i].name +"patients", message.fromJid);
+                        }
+                    }
+
                 });
+                
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("This is not a command", message.fromJid);
