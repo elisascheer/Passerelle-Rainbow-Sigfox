@@ -5,11 +5,10 @@ var app = express();
 var conString = process.env.DATABASE_URL;
 var client = new pg.Client(conString);
 client.connect();
-
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
 client.query("CREATE TABLE IF NOT EXISTS patients(id varchar primary key,name varchar)");
 client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
-//client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
+client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
 client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varchar,id_patients varchar,trigger float, constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
 client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
 client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
