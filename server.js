@@ -10,10 +10,10 @@ client.query("CREATE TABLE IF NOT EXISTS patients(id varchar primary key,name va
 client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
 client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
 client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varchar,id_patients varchar,trigger float, constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
-client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
-client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
-client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
-client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
+//client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
+//client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
+//client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
+//client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
