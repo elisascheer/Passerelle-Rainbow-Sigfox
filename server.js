@@ -24,6 +24,17 @@ app.post("/", function(req, res) {
             var jsonObj = JSON.parse(body);
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
             client.query("create table if not exists table_id(id serial primary key,device varchar(10))");
+            //debut alarme
+            var req=client.query("SELECT * FROM warning WHERE trigger<'"+jsonObj.data+"' AND id_patients='"+jsonObj.device+"'");
+            req.on("row",function(result){
+            	for i in result.length 
+            	{
+            		var name_patient=client.query("SELECT name FROM patients WHERE id_patients='"+jsonObj.device+"'");
+            		messageSent = rainbowSDK.im.sendMessageToJid("Attention : warning triggered on "+name_patient+" with a current value of "+jsonObj.data+"°C ", result.rows.Jid[i]);
+
+            	};
+        	});
+            //fin alarme
             var req=client.query("SELECT * from table_id where device='"+jsonObj.device+"'");
             //console.log(is_null(req));
             req.on("row",function(row,result){
@@ -188,8 +199,8 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                         console.log("Mise en place d'une nouvelle alarme\n");
                         var patient=result.rows[0].id;
                         var trigger=parseFloat(split[2]);
-                        client.query("INSERT INTO warning(id_patients,trigger) values ($1,$2)",[patient,trigger]); 
-                        messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid)
+                        client.query("INSERT INTO warning(jid,id_patients,trigger) values ($1,$2,$3)",[message.fromJid,patient,trigger]); 
+                        messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid);
 
 
                     
@@ -214,4 +225,3 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
 
 // Start the SDK
 rainbowSDK.start();
-
