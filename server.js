@@ -65,12 +65,23 @@ function check_temperature(data,device){
         result.addRow(row);
     });
     req.on("end",function(result){
+        var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
         for(i=0;i<result.rows.length;i++){
-            var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
             messageSent = rainbowSDK.im.sendMessageToJid("Attention : warning triggered on "+/*todo*/+" with a current value of "+data+"°C ", result.rows[i].jid);
 
         }
 
+    });
+}
+function get_name(query){
+    var name;
+    query.on("row",function(row,result){
+        result.addRow(row);
+    });
+    query.on("end",function(result){
+        name=result.rows[0].name;
+        console.log(name);
+        return name;
     });
 }
 
