@@ -5,7 +5,6 @@ var app = express();
 var conString = process.env.DATABASE_URL;
 var client = new pg.Client(conString);
 client.connect();
-
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
 client.query("CREATE TABLE IF NOT EXISTS patients(id varchar primary key,name varchar)");
 client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
@@ -14,6 +13,7 @@ client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varch
 //client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
 //client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
 //client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
+//client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -23,6 +23,7 @@ app.post("/", function(req, res) {
     });
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
+            check_temperature(jsonObj.data,jsonObj.device);
             client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
             req.on("row",function(row,result){
                 result.addRow(row);
@@ -58,6 +59,21 @@ let options = {
     }
 };
 
+function check_temperature(data,device){
+    var req=client.query("SELECT * FROM warning WHERE trigger<"+data+" AND id_patients='"+device+"'");
+    req.on("row",function(row,result){
+        result.addRow(row);
+    });
+    req.on("end",function(result){
+        for(i=0;i<result.rows.length;i++){
+            var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
+            messageSent = rainbowSDK.im.sendMessageToJid("Attention : warning triggered on "+/*todo*/+" with a current value of "+data+"°C ", result.rows[i].jid);
+
+        }
+
+    });
+}
+
 function get_temperature(arg,message){
     var get_temp=client.query("SELECT * FROM link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device WHERE patients.name='"+arg[1]+"' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
     get_temp.on("row", function (row, result) {
@@ -89,10 +105,10 @@ function stats(arg,message){
                 messageSent = rainbowSDK.im.sendMessageToJid("Summary of statistics for "+arg[1]+" :\nMean : "+result.rows[0].avg+"°C\nVariance : "+result.rows[0].variance+"°C\nStandard deviation : "+result.rows[0].stddev+"°C" , message.fromJid);
             }
 
-            else if(arg[3]=="plot"){
+            /*else if(arg[3]=="plot"){
                 //TO DO
-            }
-            else messageSent = rainbowSDK.im.sendMessageToJid("Options available : all,plot and mean", message.fromJid);
+            }*/
+            else messageSent = rainbowSDK.im.sendMessageToJid("Options available : all, mean", message.fromJid);
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("You don't have access to these data or no data have been registered yet", message.fromJid);
@@ -150,8 +166,8 @@ function warning(split,message){
             console.log("Mise en place d'une nouvelle alarme\n");
             var patient=result.rows[0].id;
             var trigger=parseFloat(split[2]);
-            client.query("INSERT INTO warning(id_patients,trigger) VALUES ($1,$2)",[patient,trigger]); 
-            messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid)       
+            client.query("INSERT INTO warning(jid,id_patients,trigger) VALUES ($1,$2,$3)",[message.fromJid,patient,trigger]); 
+            messageSent = rainbowSDK.im.sendMessageToJid("Successfully created!", message.fromJid)       
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
@@ -209,7 +225,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <name> <options>", message.fromJid);    
         }
         else if(chaine=="help"){
-            messageSent = rainbowSDK.im.sendMessageToJid("temp <name>\nlink <name>\nlist", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("temp <name>\nlink <name>\nlist\nstats <name> <all,mean...>", message.fromJid);
         }
 
         else if(chaine.indexOf("link")==0){ //si on entre la commande link
