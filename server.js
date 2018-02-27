@@ -208,6 +208,21 @@ let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     // test if the message comes from a bubble of from a conversation with one participant
     var chaine=message.content;
+    let bubbles = rainbowSDK.bubbles.getAll()[0];
+    //console.log(bubbles);
+    let contacts=rainbowSDK.contacts.getAll()[1];
+    console.log(contacts);
+    let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
+    let sendAnInvite = true;            // To set to false if you want to add someone to a bubble without having to invite him first
+    let inviteReason = "bot-invite";    // Define a reason for the invite (part of the invite received by the recipient)
+
+    rainbowSDK.bubbles.inviteContactToBubble(contacts, bubbles, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
+    // do something with the invite sent
+        console.log("ok");
+    }).catch(function(err) {
+    // do something if the invitation failed (eg. bad reference to a buble)
+        console.log("fail");
+    });
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
@@ -229,7 +244,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         }
         else if(chaine.indexOf("stats")==0){
             var arg=chaine.split(" ");
-            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("You must specify a name", message.fromJid);
+            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("Arguments are missing.", message.fromJid);
             if(arg.length==3){
                 stats(arg,message);
             }
