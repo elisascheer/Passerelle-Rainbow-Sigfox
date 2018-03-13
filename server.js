@@ -16,7 +16,19 @@ client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varch
 //client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
 //client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
 
-
+app.post("/", function(req, res) { 
+    console.log("POST");
+    var body = '';
+    req.on('data', function (data) {
+            body += data;
+            console.log(" " + body);
+    });
+    req.on('end', function () {
+            var jsonObj = JSON.parse(body);
+            check_temperature(jsonObj.data,jsonObj.device);
+            res.send("Data saved in the database successfully!\n")
+    });
+});
 var port = process.env.PORT || 4000;
 app.listen(port, function() {
     console.log("Listening on " + port);
