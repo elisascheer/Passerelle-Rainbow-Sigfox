@@ -62,7 +62,7 @@ function check_temperature(data,device){
     req.on("end",function(result){
         var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
         for(i=0;i<result.rows.length;i++){
-            messageSent = rainbowSDK.im.sendMessageToJid("Attention : warning triggered on "+result.rows[0].name+" with a current value of "+data+"°C ", result.rows[i].jid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Warning triggered on "+result.rows[0].name+" with a current value of "+data+"°C ", result.rows[i].jid);
 
         }
 
