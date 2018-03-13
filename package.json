@@ -10,7 +10,12 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "body-parser": "^1.18.2",
+    "ejs": "^2.5.7",
     "express": "^4.16.2",
+    "express-layout": "^0.1.0",
+    "express-session": "^1.15.6",
+    "express-validator": "^5.0.2",
     "pg": "^6.4.1",
     "rainbow-node-sdk": "^1.35.2"
   },

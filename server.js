@@ -3,6 +3,7 @@ let RainbowSDK = require('rainbow-node-sdk');
 var pg=require("pg");
 var app = express();
 var conString = process.env.DATABASE_URL;
+var password = process.env.password;
 var client = new pg.Client(conString);
 client.connect();
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
@@ -14,28 +15,9 @@ client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varch
 //client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
 //client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
 //client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
-app.post("/", function(req, res) { 
-    console.log("POST");
-    var body = '';
-    req.on('data', function (data) {
-            body += data;
-            console.log(" " + body);
-    });
-    req.on('end', function () {
-            var jsonObj = JSON.parse(body);
-            client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
-            req.on("row",function(row,result){
-                result.addRow(row);
-            });
-            req.on("end",function(result){
-                if(result.rows.length==0){
-                    client.query("INSERT INTO table_id(device) values($1)",[jsonObj.device]);
-                }
-            });
-            res.send("Data saved in the database successfully!\n")
-    });
-});
-var port = process.env.PORT || 5000;
+
+
+var port = process.env.PORT || 4000;
 app.listen(port, function() {
     console.log("Listening on " + port);
 });
@@ -57,6 +39,34 @@ let options = {
         "sendReadReceipt": true   // True to send the 'read' receipt automatically
     }
 };
+
+
+
+function check_temperature(data,device){
+    var req=client.query("SELECT * FROM warning JOIN link ON warning.id_patients=link.id_patients JOIN patients ON patients.id=link.id_patients WHERE trigger<"+data+"AND link.id_patients='"+device+"'");
+    req.on("row",function(row,result){
+        result.addRow(row);
+    });
+    req.on("end",function(result){
+        var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
+        for(i=0;i<result.rows.length;i++){
+            messageSent = rainbowSDK.im.sendMessageToJid("Attention : warning triggered on "+result.rows[0].name+" with a current value of "+data+"°C ", result.rows[i].jid);
+
+        }
+
+    });
+}
+function get_name(query){
+    var name;
+    query.on("row",function(row,result){
+        result.addRow(row);
+    });
+    query.on("end",function(result){
+        name=result.rows[0].name;
+        console.log(name);
+        return name;
+    });
+}
 
 function get_temperature(arg,message){
     var get_temp=client.query("SELECT * FROM link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device WHERE patients.name='"+arg[1]+"' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
@@ -89,9 +99,6 @@ function stats(arg,message){
                 messageSent = rainbowSDK.im.sendMessageToJid("Summary of statistics for "+arg[1]+" :\nMean : "+result.rows[0].avg+"°C\nVariance : "+result.rows[0].variance+"°C\nStandard deviation : "+result.rows[0].stddev+"°C" , message.fromJid);
             }
 
-            /*else if(arg[3]=="plot"){
-                //TO DO
-            }*/
             else messageSent = rainbowSDK.im.sendMessageToJid("Options available : all, mean", message.fromJid);
         }
         else {
@@ -140,7 +147,10 @@ function link(split,message){
 }
 
 
-/*function warning(split,message){
+
+
+
+function warning(split,message){
     var search_name=client.query("SELECT id FROM patients WHERE name='"+split[1]+"'");
     search_name.on("row",function(row,result){
         result.addRow(row);
@@ -150,15 +160,15 @@ function link(split,message){
             console.log("Mise en place d'une nouvelle alarme\n");
             var patient=result.rows[0].id;
             var trigger=parseFloat(split[2]);
-            client.query("INSERT INTO warning(id_patients,trigger) VALUES ($1,$2)",[patient,trigger]); 
-            messageSent = rainbowSDK.im.sendMessageToJid("L'alarme a été créée avec succès", message.fromJid)       
+            client.query("INSERT INTO warning(jid,id_patients,trigger) VALUES ($1,$2,$3)",[message.fromJid,patient,trigger]); 
+            messageSent = rainbowSDK.im.sendMessageToJid("Successfully created!", message.fromJid)       
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
         }
     });
 
-}*/
+}
 
 function list(message){
     var search_patient=client.query("SELECT name FROM patients JOIN link ON patients.id=link.id_patients WHERE jid='"+message.fromJid+"'");
@@ -181,6 +191,21 @@ let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     // test if the message comes from a bubble of from a conversation with one participant
     var chaine=message.content;
+   /* let bubbles = rainbowSDK.bubbles.getAll()[0];
+    //console.log(bubbles);
+    let contacts=rainbowSDK.contacts.getContactByJid('f623e4d2f80445cca79d90a74bbbf868@sandbox-all-in-one-prod-1.opentouch.cloud');
+    console.log(contacts);
+    let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
+    let sendAnInvite = true;            // To set to false if you want to add someone to a bubble without having to invite him first
+    let inviteReason = "bot-invite";    // Define a reason for the invite (part of the invite received by the recipient)
+
+    rainbowSDK.bubbles.inviteContactToBubble(contacts, bubbles, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
+    // do something with the invite sent
+        console.log("ok");
+    }).catch(function(err) {
+    // do something if the invitation failed (eg. bad reference to a buble)
+        console.log("fail");
+    });*/
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
@@ -202,7 +227,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         }
         else if(chaine.indexOf("stats")==0){
             var arg=chaine.split(" ");
-            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("You must specify a name", message.fromJid);
+            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("Arguments are missing.", message.fromJid);
             if(arg.length==3){
                 stats(arg,message);
             }
@@ -220,13 +245,13 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 link(split,message);
             }
         }
-       /* else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
+        else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
             var split=chaine.split(" ");
             if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <name> <trigger value>", message.fromJid);
             else {
                 warning(split,message);
             }
-        }*/
+        }
         else if(chaine=="list"){
             list(message);
         }
