@@ -246,7 +246,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <name> <options>", message.fromJid);    
         }
         else if(chaine=="help"){
-            messageSent = rainbowSDK.im.sendMessageToJid("temp <name>\nlink <name>\nlist\nstats <name> <all,mean...>", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("temp <name>\nlink <name>\nlist\nstats <name> <all,mean...>\nwarning <name> <value>", message.fromJid);
         }
 
         else if(chaine.indexOf("link")==0){ //si on entre la commande link
