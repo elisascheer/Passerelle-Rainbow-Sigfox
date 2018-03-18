@@ -55,14 +55,14 @@ let options = {
 
 
 function check_temperature(data,device){
-    var req=client.query("SELECT * FROM warning JOIN link ON warning.id_patients=link.id_patients JOIN patients ON patients.id=link.id_patients WHERE trigger<"+data+"AND link.id_patients='"+device+"'");
+    var req=client.query("SELECT warning.jid,name FROM warning JOIN link ON warning.id_patients=link.id_patients JOIN patients ON patients.id=link.id_patients WHERE trigger<"+data+"AND link.id_patients='"+device+"'");
     req.on("row",function(row,result){
         result.addRow(row);
     });
     req.on("end",function(result){
         var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
         for(i=0;i<result.rows.length;i++){
-            messageSent = rainbowSDK.im.sendMessageToJid("Warning triggered on "+result.rows[0].name+" with a current value of "+data+"°C ", result.rows[i].jid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Attention, la température du patient "+result.rows[0].name+" a atteint "+data+"°C ", result.rows[i].jid);
 
         }
 
@@ -88,10 +88,10 @@ function get_temperature(arg,message){
     get_temp.on("end", function (result) {
         if(result.rows.length!=0){
             console.log(result.rows[0].data);
-            messageSent = rainbowSDK.im.sendMessageToJid("The temperature of "+arg[1]+" is "+ result.rows[0].data + "°C", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("La température de  "+arg[1]+" est de  "+ result.rows[0].data + "°C", message.fromJid);
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("You don't have access to these data or no data have been registered yet", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez pas accès aux données de ce patient ou aucune données n'ont été enregistrées", message.fromJid);
         }
     });
 }
@@ -105,16 +105,16 @@ function stats(arg,message){
         if(result.rows.length!=0){
             var mean=0;
             if(arg[2]=="mean"){
-                messageSent = rainbowSDK.im.sendMessageToJid("The mean temperature of "+arg[1]+" is "+result.rows[0].avg+"°C", message.fromJid);                            
+                messageSent = rainbowSDK.im.sendMessageToJid("La température moyenne de  "+arg[1]+" est "+result.rows[0].avg+"°C", message.fromJid);                            
             }
             else if(arg[2]=="all"){
-                messageSent = rainbowSDK.im.sendMessageToJid("Summary of statistics for "+arg[1]+" :\nMean : "+result.rows[0].avg+"°C\nVariance : "+result.rows[0].variance+"°C\nStandard deviation : "+result.rows[0].stddev+"°C" , message.fromJid);
+                messageSent = rainbowSDK.im.sendMessageToJid("Résumé statistiques "+arg[1]+" :\nMoyenne : "+result.rows[0].avg+"°C\nVariance : "+result.rows[0].variance+"°C\nEcart type : "+result.rows[0].stddev+"°C" , message.fromJid);
             }
 
-            else messageSent = rainbowSDK.im.sendMessageToJid("Options available : all, mean", message.fromJid);
+            else messageSent = rainbowSDK.im.sendMessageToJid("Options disponibles : all, mean", message.fromJid);
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("You don't have access to these data or no data have been registered yet", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez pas accès aux données de ce patient ou aucune données n'ont été enregistrées", message.fromJid);
         }
     });
 }
@@ -145,7 +145,7 @@ function link(split,message){
                         });
                         search_in_table.on("end",function(result){
                             if(result.rows.length==0) client.query("INSERT INTO link(jid,id_patients) VALUES ($1,$2)",[message.fromJid,patient]);
-                            else messageSent = rainbowSDK.im.sendMessageToJid("You're already linked to "+split[1]+" !", message.fromJid);
+                            else messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes déjà attaché au patient "+split[1]+" !", message.fromJid);
                         });
 
                     });
@@ -153,7 +153,7 @@ function link(split,message){
             });
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Le nom passé en argument n'est pas enregistré dans la base de données", message.fromJid);
         }
     });    
 }
@@ -173,13 +173,46 @@ function warning(split,message){
             var patient=result.rows[0].id;
             var trigger=parseFloat(split[2]);
             client.query("INSERT INTO warning(jid,id_patients,trigger) VALUES ($1,$2,$3)",[message.fromJid,patient,trigger]); 
-            messageSent = rainbowSDK.im.sendMessageToJid("Successfully created!", message.fromJid)       
+            messageSent = rainbowSDK.im.sendMessageToJid("Alarme déclarée!", message.fromJid)       
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("The name passed as an argument doesn't exist", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Le nom passé en argument n'est pas enregistré dans la base de données", message.fromJid);
         }
     });
 
+}
+
+function delete_warning(split,message){
+    var del=client.query("SELECT * FROM warning WHERE jid='"+message.fromJid+"'");
+    del.on("row",function(row,result){
+        result.addRow(row);
+    });
+    del.on("end",function(result){
+        //console.log(result.rows);
+        if(result.rows.length!=0){
+            messageSent = rainbowSDK.im.sendMessageToJid("Vous avez déclaré la ou les alarme(s) suivante(s) : \n", message.fromJid);
+            for(i=0;i<result.rows.length;i++){
+                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].trigger+"°C\n", message.fromJid);
+            }
+            messageSent = rainbowSDK.im.sendMessageToJid("Souhaitez-vous toutes les désactiver? Entrez O pour oui, N <valeur1> <valeur2> pour en désactiver une ou plusieurs\n", message.fromJid);
+            wait_for_response(message.fromJid);
+        }
+    });
+}
+
+function wait_for_response(jid){
+    rainbowSDK.events.on('rainbow_onmessagereceived',function(message){
+        if(message.content=="O"){
+            client.query("DELETE FROM WARNING WHERE jid='"+message.fromJid+"'");
+        }
+        else if(message.content.indexOf("N")==0){
+            var split=message.content.split(" ");
+            console.log(split.length);
+            for(i=1;i<split.length;i++){
+                client.query("DELETE FROM WARNING WHERE jid='"+message.fromJid+"' AND trigger="+parseInt(split[i]));
+            }
+        }
+    })
 }
 
 function list(message){
@@ -188,9 +221,9 @@ function list(message){
         result.addRow(row);
     });
     search_patient.on("end",function(result){
-        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("You haven't declared any patient yet ", message.fromJid);
+        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez déclaré aucun patient", message.fromJid);
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Your patients are : ", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Vos patients : ", message.fromJid);
             for(i=0;i<result.rows.length;i++){
                 messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
         } 
@@ -232,43 +265,55 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         });
         if(chaine.indexOf("temp")==0){
             var arg=chaine.split(" ");
-            if(arg.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : temp <name>", message.fromJid);
+            if(arg.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : temp <nom>", message.fromJid);
             else {
                 get_temperature(arg,message);
             }
         }
         else if(chaine.indexOf("stats")==0){
             var arg=chaine.split(" ");
-            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("Arguments are missing.", message.fromJid);
+            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("Il manque des aguments", message.fromJid);
             if(arg.length==3){
                 stats(arg,message);
             }
-            else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <name> <options>", message.fromJid);    
+            else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <nom> <options>", message.fromJid);    
         }
         else if(chaine=="help"){
-            messageSent = rainbowSDK.im.sendMessageToJid("temp <name>\nlink <name>\nlist\nstats <name> <all,mean...>\nwarning <name> <value>", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("temp <nom>\nlink <nom>\nlist\nstats <nom> <all,mean...>\nwarning <nom> <valeur>\nremove warning", message.fromJid);
         }
 
         else if(chaine.indexOf("link")==0){ //si on entre la commande link
             //link ID name
             var split=chaine.split(" ");
-            if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <name>", message.fromJid);
+            if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <nom>", message.fromJid);
             else {
                 link(split,message);
             }
         }
         else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
             var split=chaine.split(" ");
-            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <name> <trigger value>", message.fromJid);
+            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <nom> <valeur>", message.fromJid);
             else {
                 warning(split,message);
             }
+        }
+        else if(chaine.indexOf("remove")==0){
+            var split=chaine.split(" ");
+            if(split.length!=2)  messageSent = rainbowSDK.im.sendMessageToJid("usage : remove warning", message.fromJid);
+            else {
+                if(split[1]=="warning"){
+                delete_warning(split,message);
+                }
+            }
+            /*else if(split[1]=="patient"){
+
+            }*/
         }
         else if(chaine=="list"){
             list(message);
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("This is not a command, enter the command help to see all the available commands", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToJid("Ce n'est pas une commande, veuillez entrer help pour accéder à la liste des commandes disponibles", message.fromJid);
         }
     }
     else {
