@@ -15,7 +15,6 @@ client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varch
 //client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
 //client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
 //client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
-
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
