@@ -15,7 +15,6 @@ client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varch
 //client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
 //client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
 //client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
-
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -231,26 +230,42 @@ function list(message){
     });
 }
 
-// Instantiate the SDK
-let rainbowSDK = new RainbowSDK(options);
-rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
-    // test if the message comes from a bubble of from a conversation with one participant
-    var chaine=message.content;
-   /* let bubbles = rainbowSDK.bubbles.getAll()[0];
-    //console.log(bubbles);
-    let contacts=rainbowSDK.contacts.getContactByJid('f623e4d2f80445cca79d90a74bbbf868@sandbox-all-in-one-prod-1.opentouch.cloud');
-    console.log(contacts);
-    let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
-    let sendAnInvite = true;            // To set to false if you want to add someone to a bubble without having to invite him first
-    let inviteReason = "bot-invite";    // Define a reason for the invite (part of the invite received by the recipient)
 
-    rainbowSDK.bubbles.inviteContactToBubble(contacts, bubbles, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
+
+function create_bubble(name){
+    let withHistory = true;
+    rainbowSDK.bubbles.createBubble(name,withHistory).then(function(bubble) {
+    // do something with the bubble created
+        console.log("bubble created");
+    }).catch(function(err) {
+    // do something if the creation of the bubble failed (eg. providing the same name as an existing bubble)
+        console.log("error while creating the bubble");
+    });
+}
+
+function invite_bubble(jid_contact,jid_bubble){
+    let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
+    let sendAnInvite = false;            // To set to false if you want to add someone to a bubble without having to invite him first
+    let inviteReason = "bot-invite";    // Define a reason for the invite (part of the invite received by the recipient)
+    let contact=rainbowSDK.contacts.getContactByJid(jid_contact);
+    let bubble=rainbowSDK.bubbles.getBubbleByJid(jid_bubble);
+    rainbowSDK.bubbles.inviteContactToBubble(contact, bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
     // do something with the invite sent
         console.log("ok");
     }).catch(function(err) {
     // do something if the invitation failed (eg. bad reference to a buble)
         console.log("fail");
-    });*/
+    });
+}
+// Instantiate the SDK
+let rainbowSDK = new RainbowSDK(options);
+rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
+    // test if the message comes from a bubble of from a conversation with one participant
+    var chaine=message.content;
+    let bubbles = rainbowSDK.bubbles.getAll();
+    console.log(bubbles);
+    //let contacts=rainbowSDK.contacts.getContactByJid('f623e4d2f80445cca79d90a74bbbf868@sandbox-all-in-one-prod-1.opentouch.cloud');
+    //console.log(contacts);
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
@@ -308,6 +323,11 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             /*else if(split[1]=="patient"){
 
             }*/
+        }
+        else if(chaine.indexOf("lier")==0){
+            var split=chaine.split(" ");
+            create_bubble(split[1]);
+
         }
         else if(chaine=="list"){
             list(message);
