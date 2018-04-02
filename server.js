@@ -7,14 +7,10 @@ var password = process.env.password;
 var client = new pg.Client(conString);
 client.connect();
 client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
-client.query("CREATE TABLE IF NOT EXISTS patients(id varchar primary key,name varchar)");
-client.query("CREATE TABLE IF NOT EXISTS doctors(jid varchar primary key)");
-client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_patients varchar,constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
-client.query("CREATE TABLE IF NOT EXISTS warning(id serial primary key,jid varchar,id_patients varchar,trigger float, constraint fk foreign key (jid) references doctors(jid),constraint fk_id foreign key (id_patients) references patients(id))");
-//client.query("insert into patients(id,name) values('1B3EFA','Dubois')");
-//client.query("insert into patients(id,name) values('1B3EFB','Thomas')");
-//client.query("insert into patients(id,name) values('1B3EFC','Dupont')");
-//client.query("insert into patients(id,name) values('1B3DEB','Sigfox')");
+client.query("CREATE TABLE IF NOT EXISTS users(jid varchar primary key,name varchar,category varchar(1))");
+client.query("CREATE TABLE IF NOT EXISTS sensors(device varchar primary key,userjid varchar)");
+client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_sensors varchar,constraint fk foreign key (jid) references users(jid),constraint fk_id foreign key (id_sensors) references sensors(device))");
+client.query("CREATE TABLE IF NOT EXISTS warning(bubblejid serial primary key,trigger float)");
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -80,7 +76,7 @@ function get_name(query){
 }
 
 function get_temperature(arg,message){
-    var get_temp=client.query("SELECT * FROM link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device WHERE patients.name='"+arg[1]+"' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
+    var get_temp=client.query("SELECT * FROM link JOIN temperature ON temperature.device=link.id_sensors JOIN users ON users.id_sensors=temperature.device WHERE users.name='"+arg[1]+"' AND users.category='P' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
     get_temp.on("row", function (row, result) {
         result.addRow(row);
     });
@@ -95,7 +91,7 @@ function get_temperature(arg,message){
     });
 }
 
-function stats(arg,message){
+/*function stats(arg,message){
     var req=client.query("SELECT AVG(data),VARIANCE(data),STDDEV(data) FROM (SELECT * FROM link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device WHERE patients.name='"+arg[1]+"') AS stats");
     req.on("row", function (row, result) {
         result.addRow(row);
@@ -116,39 +112,65 @@ function stats(arg,message){
             messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez pas accès aux données de ce patient ou aucune données n'ont été enregistrées", message.fromJid);
         }
     });
-}
+}*/
 
+
+
+function check(jid_doc,message){
+    var check=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"' AND category='M'");
+    check.on("row",function(row,result){
+        result.addRow(row);
+    });
+    check.on("end",function(result){
+        if(result.rows.length!=0){
+            //le medecin a le droit de se link car est bien dans la table users
+            link(split,message);
+        }
+        else messageSent=rainbowSDK.im.sendMessageToJid("Non autorisé", message.fromJid);
+    });
+}
 function link(split,message){
-    var search_name=client.query("SELECT * FROM patients where name='"+split[1]+"'");
+    console.log("ok");
+    var search_name=client.query("SELECT * FROM users WHERE name='"+split[1]+"' AND category='P'");
     search_name.on("row",function(row,result){
         result.addRow(row);
     });
     search_name.on("end",function(result){
         if(result.rows.length!=0){
-            var id_doc=client.query("SELECT * FROM doctors where jid='"+message.fromJid+"'");
+            //console.log(result.rows);
+            var id_doc=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"'"); //on récupère le jid du medecin
             id_doc.on("row",function(row,result){
                 result.addRow(row);
             });
             id_doc.on("end",function(result){
+                //console.log(result.rows);
                 if(result.rows.length==1){
-                    var id_patient=client.query("SELECT id FROM patients where name='"+split[1]+"'");
+                    var id_patient=client.query("SELECT * FROM users WHERE name='"+split[1]+"' AND category='P'");
                     id_patient.on("row",function(row,result){
                         result.addRow(row);
                     });
                     id_patient.on("end",function(result){
-                        var patient=result.rows[0].id;
+                        //console.log(result.rows);
+                        var patient=result.rows[0].jid;
                         //console.log(patient);
-                        var search_in_table=client.query("SELECT * FROM link WHERE jid='"+message.fromJid+"' AND id_patients='"+patient+"'");
+                        var search_in_table=client.query("SELECT * FROM sensors WHERE userjid='"+patient+"'");
                         search_in_table.on("row",function(row,result){
                             result.addRow(row);
                         });
                         search_in_table.on("end",function(result){
-                            if(result.rows.length==0) client.query("INSERT INTO link(jid,id_patients) VALUES ($1,$2)",[message.fromJid,patient]);
-                            else messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes déjà attaché au patient "+split[1]+" !", message.fromJid);
+                            //console.log(result.rows[0]);
+                            var sensor=result.rows[0].device;
+                            //console.log(sensor);
+                            client.query("INSERT INTO link(jid,id_sensors) VALUES ($1,$2)",[message.fromJid,sensor]);
+                            let bubbles = rainbowSDK.bubbles.getAll()[1];
+                            let bubbleid=bubbles.jid;
+                            create_bubble(split[1],message.fromJid,patient);
+                            let contact = rainbowSDK.contacts.getAll();
+                            //else messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes déjà attaché au patient "+split[1]+" !", message.fromJid);
                         });
 
                     });
-                }                    
+                }                   
             });
         }
         else {
@@ -160,7 +182,7 @@ function link(split,message){
 
 
 
-
+/*
 function warning(split,message){
     var search_name=client.query("SELECT id FROM patients WHERE name='"+split[1]+"'");
     search_name.on("row",function(row,result){
@@ -230,54 +252,57 @@ function list(message){
     });
 }
 
+*/
 
-
-function create_bubble(name){
+function create_bubble(name,jid_m,jid_p){
     let withHistory = true;
-    rainbowSDK.bubbles.createBubble(name,withHistory).then(function(bubble) {
+    rainbowSDK.bubbles.createBubble(name, "A little description of my bubble", withHistory).then(function(bubble) {
     // do something with the bubble created
-        console.log("bubble created");
+        console.log(bubble.jid);
+        invite_bubble(jid_m,bubble);
+        invite_bubble(jid_p,bubble);
+        console.log("bubble ok");
     }).catch(function(err) {
     // do something if the creation of the bubble failed (eg. providing the same name as an existing bubble)
-        console.log("error while creating the bubble");
+        console.log("bubble fail");
     });
+
 }
 
-function invite_bubble(jid_contact,jid_bubble){
+function invite_bubble(jid_contact,bubble){
+    let contact=rainbowSDK.contacts.getAll();
     let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
     let sendAnInvite = false;            // To set to false if you want to add someone to a bubble without having to invite him first
-    let inviteReason = "bot-invite";    // Define a reason for the invite (part of the invite received by the recipient)
-    let contact=rainbowSDK.contacts.getContactByJid(jid_contact);
-    let bubble=rainbowSDK.bubbles.getBubbleByJid(jid_bubble);
-    rainbowSDK.bubbles.inviteContactToBubble(contact, bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
-    // do something with the invite sent
-        console.log("ok");
-    }).catch(function(err) {
-    // do something if the invitation failed (eg. bad reference to a buble)
-        console.log("fail");
-    });
+    let inviteReason = "bot-invite";
+    //console.log(bubble);
+    for(i=0;i<contact.length;i++){
+        if(contact[i].jid_im==jid_contact) {
+            console.log(contact[i]);
+            rainbowSDK.bubbles.inviteContactToBubble(contact[i], bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
+                // do something with the invite sent
+                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("hello je suis le bot", bubble.jid);
+                    console.log("ok");
+            }).catch(function(err) {
+                // do something if the invitation failed (eg. bad reference to a buble)
+                     console.log("fail");
+            });
+         }
+    }
 }
+
+
 // Instantiate the SDK
 let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     // test if the message comes from a bubble of from a conversation with one participant
-    var chaine=message.content;
-    let bubbles = rainbowSDK.bubbles.getAll();
-    console.log(bubbles);
+    //console.log(bubbles);
+    //console.log(message.fromJid);
     //let contacts=rainbowSDK.contacts.getContactByJid('f623e4d2f80445cca79d90a74bbbf868@sandbox-all-in-one-prod-1.opentouch.cloud');
     //console.log(contacts);
+    var chaine=message.content;
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
-        var req=client.query("SELECT * from doctors WHERE jid='"+message.fromJid+"'");
-        req.on("row",function(row,result){
-            result.addRow(row);
-        });
-        req.on("end",function(result){
-           if(result.rows.length==0){
-            client.query("INSERT INTO doctors(jid) VALUES($1)",[message.fromJid]);
-           }
-        });
         if(chaine.indexOf("temp")==0){
             var arg=chaine.split(" ");
             if(arg.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : temp <nom>", message.fromJid);
@@ -297,10 +322,10 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             messageSent = rainbowSDK.im.sendMessageToJid("temp <nom>\nlink <nom>\nlist\nstats <nom> <all,mean...>\nwarning <nom> <valeur>\nremove warning", message.fromJid);
         }
 
-        else if(chaine.indexOf("link")==0){ //si on entre la commande link
+        else if(chaine.indexOf("link_patient")==0){ //si on entre la commande link_device
             //link ID name
             var split=chaine.split(" ");
-            if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <nom>", message.fromJid);
+            if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <nom> <identifiant de l'antenne>", message.fromJid);
             else {
                 link(split,message);
             }
@@ -343,4 +368,4 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
 });
 
 // Start the SDK
-rainbowSDK.start();
+rainbowSDK.start()
