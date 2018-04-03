@@ -10,7 +10,9 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "anychart-nodejs": "^1.3.8",
     "body-parser": "^1.18.2",
+    "chart.js": "^2.7.2",
     "ejs": "^2.5.7",
     "express": "^4.16.2",
     "express-layout": "^0.1.0",
