@@ -10,7 +10,7 @@ client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date 
 client.query("CREATE TABLE IF NOT EXISTS users(jid varchar primary key,name varchar,category varchar(1))");
 client.query("CREATE TABLE IF NOT EXISTS sensors(device varchar primary key,userjid varchar)");
 client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_sensors varchar,constraint fk foreign key (jid) references users(jid),constraint fk_id foreign key (id_sensors) references sensors(device))");
-client.query("CREATE TABLE IF NOT EXISTS warning(bubblejid serial primary key,trigger float)");
+client.query("CREATE TABLE IF NOT EXISTS warning(bubblejid varchar primary key,trigger float)");
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -20,7 +20,21 @@ app.post("/", function(req, res) {
     });
     req.on('end', function () {
             var jsonObj = JSON.parse(body);
+            client.query("INSERT INTO temperature(date,device,data) VALUES(now(),$1,$2)",[jsonObj.device,jsonObj.data]);
             check_temperature(jsonObj.data,jsonObj.device);
+            var dev=client.query("SELECT * FROM sensors WHERE device='"+jsonObj.device+"'");
+            dev.on("row",function(row,result){
+                result.addRow(row);
+            })
+            dev.on("end",function(result){
+                if(result.rows.length==0){
+                    client.query("INSERT INTO sensors(device) VALUES('"+jsonObj.device+"')");
+
+                }
+                else {
+                    console.log("déjà enregistré dans la bdd");
+                }
+            })
             res.send("Data saved in the database successfully!\n")
     });
 });
@@ -50,48 +64,69 @@ let options = {
 
 
 function check_temperature(data,device){
-    var req=client.query("SELECT warning.jid,name FROM warning JOIN link ON warning.id_patients=link.id_patients JOIN patients ON patients.id=link.id_patients WHERE trigger<"+data+"AND link.id_patients='"+device+"'");
+    var req=client.query("SELECT * FROM sensors WHERE device='"+device+"'");
     req.on("row",function(row,result){
         result.addRow(row);
     });
     req.on("end",function(result){
-        var name_patient=client.query("SELECT name FROM patients WHERE id='"+device+"'");
-        for(i=0;i<result.rows.length;i++){
-            messageSent = rainbowSDK.im.sendMessageToJid("Attention, la température du patient "+result.rows[0].name+" a atteint "+data+"°C ", result.rows[i].jid);
-
+        //console.log(result.rows);
+        var jid=result.rows[0].userjid;
+        let bubbles=rainbowSDK.bubbles.getAll();
+        //console.log(bubbles[0].users[0].jid_im);
+        if(jid!=null){
+            for (i=0;i<bubbles.length;i++){
+                //console.log(bubbles[i].users);
+                for (j=0;j<bubbles[i].users.length;j++){
+                    //console.log(bubbles[i].users[j].jid_im);
+                    if(bubbles[i].users[j].jid_im==jid){
+                        //console.log(bubbles[i].users[j].jid_im);
+                        var in_bubble=bubbles[i].jid;
+                        var trigger=client.query("SELECT * FROM warning WHERE bubblejid='"+in_bubble+"' AND trigger<"+data+"");
+                        trigger.on("row",function(row,result){
+                            result.addRow(row);
+                        });
+                        trigger.on("end",function(result){
+                            if(result.rows.length==0){
+                                console.log("warning non atteint");
+                            }
+                            else{
+                                console.log("attention température élevée");
+                                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Attention la température à dépassé "+result.rows[0].trigger+", elle a atteint "+data+"!",in_bubble);
+                            }
+                        })
+                       // console.log(bubbles[i].jid);
+                    }
+                }
+                //console.log(in_bubble);
+            } 
+        }
+        else {
+            console.log("jid null");
         }
 
     });
 }
-function get_name(query){
-    var name;
-    query.on("row",function(row,result){
-        result.addRow(row);
-    });
-    query.on("end",function(result){
-        name=result.rows[0].name;
-        console.log(name);
-        return name;
-    });
-}
 
-function get_temperature(arg,message){
-    var get_temp=client.query("SELECT * FROM link JOIN temperature ON temperature.device=link.id_sensors JOIN users ON users.id_sensors=temperature.device WHERE users.name='"+arg[1]+"' AND users.category='P' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
+function get_temperature(message){
+    var bubblejid=message.fromBubbleJid;
+    let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
+    console.log(name);
+    var get_temp=client.query("SELECT * FROM users JOIN sensors ON sensors.userjid=users.jid JOIN temperature ON sensors.device=temperature.device AND users.category='P' AND users.name='"+name+"' ORDER BY date DESC NULLS LAST,data LIMIT 1 OFFSET 0");
     get_temp.on("row", function (row, result) {
         result.addRow(row);
     });
     get_temp.on("end", function (result) {
         if(result.rows.length!=0){
             console.log(result.rows[0].data);
-            messageSent = rainbowSDK.im.sendMessageToJid("La température de  "+arg[1]+" est de  "+ result.rows[0].data + "°C", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Température de  "+ result.rows[0].data + "°C", bubblejid);
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez pas accès aux données de ce patient ou aucune données n'ont été enregistrées", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Aucune valeurs enregistrées\n", bubblejid);
         }
     });
 }
 
-/*function stats(arg,message){
+function stats(arg,message){
     var req=client.query("SELECT AVG(data),VARIANCE(data),STDDEV(data) FROM (SELECT * FROM link JOIN temperature ON temperature.device=link.id_patients JOIN patients ON patients.id=temperature.device WHERE patients.name='"+arg[1]+"') AS stats");
     req.on("row", function (row, result) {
         result.addRow(row);
@@ -112,7 +147,7 @@ function get_temperature(arg,message){
             messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez pas accès aux données de ce patient ou aucune données n'ont été enregistrées", message.fromJid);
         }
     });
-}*/
+}
 
 
 
@@ -179,30 +214,62 @@ function link(split,message){
     });    
 }
 
-
-
-
-/*
-function warning(split,message){
-    var search_name=client.query("SELECT id FROM patients WHERE name='"+split[1]+"'");
-    search_name.on("row",function(row,result){
+function link_device(split,message){
+    var patient=client.query("SELECT * from users WHERE name='"+split[1]+"' AND category='P'");
+    patient.on("row",function(row,result){
         result.addRow(row);
     });
-    search_name.on("end",function(result){
+    patient.on("end",function(result){
         if(result.rows.length!=0){
-            console.log("Mise en place d'une nouvelle alarme\n");
-            var patient=result.rows[0].id;
-            var trigger=parseFloat(split[2]);
-            client.query("INSERT INTO warning(jid,id_patients,trigger) VALUES ($1,$2,$3)",[message.fromJid,patient,trigger]); 
-            messageSent = rainbowSDK.im.sendMessageToJid("Alarme déclarée!", message.fromJid)       
+            var userjid=result.rows[0].jid;
+            var device=client.query("SELECT * FROM sensors WHERE device='"+split[2]+"'");
+            device.on("row",function(row,result){
+                result.addRow(row);
+            });
+            device.on("end",function(result){
+                if(result.rows.length!=0){
+                    client.query("UPDATE sensors SET userjid='"+userjid+"' WHERE device='"+split[2]+"'");
+
+                }
+                else {
+                    console.log("le capteur n'existe pas\n");
+                }
+            });
+
         }
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Le nom passé en argument n'est pas enregistré dans la base de données", message.fromJid);
+            console.log("patient non trouvé\n");
+        }
+    })
+
+
+}
+
+
+
+
+
+function warning(message,value){
+    var name=rainbowSDK.bubbles.getBubbleByJid(message).name;
+    console.log(message);
+    var search_bubble=client.query("SELECT * FROM warning WHERE bubblejid='"+message+"' AND trigger='"+value+"'");
+    search_bubble.on("row",function(row,result){
+        result.addRow(row);
+    });
+    search_bubble.on("end",function(result){
+        console.log(result.rows);
+        if(result.rows.length==0){
+            console.log("alarme ok");
+            client.query("INSERT INTO warning(bubblejid,trigger) VALUES('"+message+"','"+value+"')");
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Alarme mise en place\n",message);
+        }
+        else {
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Alarme de "+value+"°C dejà mise en place\n",message);
         }
     });
 
 }
-
+/*
 function delete_warning(split,message){
     var del=client.query("SELECT * FROM warning WHERE jid='"+message.fromJid+"'");
     del.on("row",function(row,result){
@@ -303,26 +370,11 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
-        if(chaine.indexOf("temp")==0){
-            var arg=chaine.split(" ");
-            if(arg.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : temp <nom>", message.fromJid);
-            else {
-                get_temperature(arg,message);
-            }
-        }
-        else if(chaine.indexOf("stats")==0){
-            var arg=chaine.split(" ");
-            if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("Il manque des aguments", message.fromJid);
-            if(arg.length==3){
-                stats(arg,message);
-            }
-            else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <nom> <options>", message.fromJid);    
-        }
-        else if(chaine=="help"){
+        if(chaine=="help"){
             messageSent = rainbowSDK.im.sendMessageToJid("temp <nom>\nlink <nom>\nlist\nstats <nom> <all,mean...>\nwarning <nom> <valeur>\nremove warning", message.fromJid);
         }
 
-        else if(chaine.indexOf("link_patient")==0){ //si on entre la commande link_device
+        else if(chaine.indexOf("link_patient")==0){ //si on entre la commande link_patient lie un médecin à un patient
             //link ID name
             var split=chaine.split(" ");
             if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <nom> <identifiant de l'antenne>", message.fromJid);
@@ -330,11 +382,12 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 link(split,message);
             }
         }
-        else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
+        else if(chaine.indexOf("link_device")==0){ //si on entre la commande link_device lie un patient à une antenne
+            //link ID name
             var split=chaine.split(" ");
-            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <nom> <valeur>", message.fromJid);
+            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : link_sensor <name> <identifiant de l'antenne>", message.fromJid);
             else {
-                warning(split,message);
+                link_device(split,message);
             }
         }
         else if(chaine.indexOf("remove")==0){
@@ -361,9 +414,40 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             messageSent = rainbowSDK.im.sendMessageToJid("Ce n'est pas une commande, veuillez entrer help pour accéder à la liste des commandes disponibles", message.fromJid);
         }
     }
+
     else {
+        console.log(message.fromBubbleJid);
+        console.log(rainbowSDK.bubbles.getBubbleByJid(message.fromBubbleJid).users[0].jid_im);
+        var jid=message.fromBubbleJid;
+        console.log("Message : "+message.content);
+        if(chaine=="temp"){
+             get_temperature(message);
+        }
+        else if(chaine.indexOf("stats")==0){
+            var arg=chaine.split(" ");
+            //if(arg.length<=2) messageSent = rainbowSDK.im.sendMessageToJid("Il manque des aguments", message.fromJid);
+            if(arg.length==3){
+                stats(arg,message);
+            }
+            //else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <nom> <options>", message.fromJid);    
+        }
+        else if(chaine=="help"){
+            //messageSent = rainbowSDK.im.sendMessageToJid("temp <nom>\nlink <nom>\nlist\nstats <nom> <all,mean...>\nwarning <nom> <valeur>\nremove warning", message.fromJid);
+        }
+        else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
+            var split=chaine.split(" ");
+            if (split.length!=2) {
+                //messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <valeur>", message.fromJid);
+            }
+            else {
+                var value=split[1];
+                console.log(value);
+                warning(jid,value);
+            }
+        }
         // send the answer to the user directly otherwise
-        //messageSent = rainbowSDK.im.sendMessageToJid('The message answer', message.fromJid);
+        console.log("je suis dans la bulle");
+
     }
 });
 
