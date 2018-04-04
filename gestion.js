@@ -49,3 +49,50 @@ function AddMedecin(split,message){
         messageSent = rainbowSDK.im.sendMessageToJid("Seul l'administrateur peut utiliser cette fonction", message.fromJid);
     }
 }
+
+function list_medecins(message){
+    var search_patient=client.query("SELECT name FROM users WHERE category='M'");
+    search_patient.on("row",function(row,result){
+        result.addRow(row);
+    });
+    search_patient.on("end",function(result){
+        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Aucun médecin n'a été déclaré.", message.fromJid);
+        else {
+            messageSent = rainbowSDK.im.sendMessageToJid("Les médecins sont : ", message.fromJid);
+            for(i=0;i<result.rows.length;i++){
+                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
+        } 
+        }              
+    });
+}
+
+function list_patients(message){
+    var search_patient=client.query("SELECT name FROM users WHERE category='P'");
+    search_patient.on("row",function(row,result){
+        result.addRow(row);
+    });
+    search_patient.on("end",function(result){
+        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Aucun médecin n'a été déclaré.", message.fromJid);
+        else {
+            messageSent = rainbowSDK.im.sendMessageToJid("Les patients sont : ", message.fromJid);
+            for(i=0;i<result.rows.length;i++){
+                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
+        } 
+        }              
+    });
+}
+
+else if(chaine=="list_medecins"){
+            list_medecins(message);
+}
+else if(chaine=="list_patients"){
+    list_patients(message);
+}
+else if(chaine.indexOf("Inscription")==0){
+    var split=chaine.split(" ");
+    Inscription(split,message);
+}
+else if(chaine.indexOf("Medecin")==0){
+    var split=chaine.split(" ");
+    AddMedecin(split,message);
+}
