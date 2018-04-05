@@ -508,12 +508,17 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         else if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
             clientnpm.message(chaine.substring(4,message.length), {})
                 .then((datawit) => {
-			console.log(datawit);
-			console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
-			if(datawit.entities.intent[0].confidence < 0.8){
-				messageSent = rainbowSDK.im.sendMessageToJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromJid);
+			// console.log(datawit);
+			// console.log(Object.keys(datawit.entities).length);
+			if (Object.keys(datawit.entities).length == 0) {
+				messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
 			}
-			else {
+			else if(datawit.entities.intent[0].confidence < 0.5){
+				console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
+				messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromBubbleJid);
+			}
+			else{
+			
 				var value = datawit.entities.intent[0].value;
 				if(value == "température"){
 					console.log("Objectif : donner température");
