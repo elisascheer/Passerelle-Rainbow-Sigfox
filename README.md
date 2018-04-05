@@ -1,29 +1,75 @@
-# Passerelle-Rainbow-Sigfox
+## LineChart
 
-Notre projet ingénieur 2A consiste à établir une passerelle entre les données émises par un objet Sigfox et l'application de chat professionnelle Rainbow.
+LineChart generator in node.js.
 
-Le code fournit dans ce git est le code de la gateway, c'est un bot codé en Javascript qui répond aux requêtes des utilisateurs de Rainbow.
+## Install
 
-Pour déployer ce code il faudrait avoir un compte développeur Rainbow
+```bash
+npm install d3node-linechart
+```
 
-Le Bot est hebergé dans la plateforme Heroku
+## Usage
 
-Pour déployer ce code :
-- git clone https://github.com/elisascheer/Passerelle-Rainbow-Sigfox
-- cd Passerelle-Rainbow-Sigfox
-- heroku apps:create [NAME OF YOUR APP]
-- heroku addons:create heroku-postgresql:hobby-dev
-- heroku git:remote -a [NAME OF YOUR APP]
-- git push heroku master
-- variables environnements :
-- [x] heroku config:set LOG=[ADRESSE MAIL DE VOTRE COMPTE DEVLOPPEUR]
-- [x] heroku config:set PASS=[MOT DE PASSE DE VOTRE COMPTE DEVLOPPEUR]
-- heroku ps:scale web=1
-- heroku logs --tail
+```js
+const d3nLine = require('d3node-linechart');
+const line = d3nLine(data, selector, container, style)
+```
+
+Check out the [example](./example) for usage.
+
+##### Output the visualization result to a image
+
+```
+npm run build
+```
+
+## Output Preview (png):
+
+![chart](./example/output.png)
 
 
+## API
 
-Architecture globale de la passerelle
-![alt tag](https://cdn.discordapp.com/attachments/369435428706582535/403285199820947476/Architecture.jpg)
-Lien du git pour le code Arduino -> https://github.com/elisascheer/Arduino-Sigfox
+### d3nLine({ data[, selector, container, style] })
 
+#### options
+
+##### data
+
+- Type: `Array`
+
+Data from file or web processed by d3 library.
+
+##### selector
+
+- Type: `String`
+- Default: `'#chart'`
+
+DOM selector in container.
+
+##### container
+
+- Type: `String`
+- Default: `<div id="container"><h2>Line Chart</h2><div id="chart"></div></div>`
+
+DOM contain the visualization result.
+
+##### style
+
+- Type: `String`<br>
+- Default: `''`
+
+Linechart style.
+
+## Contributing
+
+1. Fork it!
+2. Create your feature branch: `git checkout -b my-new-feature`
+3. Commit your changes: `git commit -am 'Add some feature'`
+4. Push to the branch: `git push origin my-new-feature`
+5. Submit a pull request :D
+
+
+### LICENSE
+
+[MIT](LICENSE) &copy; [d3-node](https://github.com/d3-node)
