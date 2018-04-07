@@ -19,17 +19,23 @@ app.get('/', function (req, res) {
 app.listen(port, function() {
     console.log("Listening on " + port);
 });
-const parseTime = d3.timeParse('%d-%b-%y');
-const tsvString = fs.readFileSync('data/data.tsv').toString();
-const data = [{"date":"1" , "temp": "2" },
-              {"date":"4" , "temp":"5" },
-              {"date":"6" , "temp" :"7"}];
-const tab = (data,d => {
-  return {
-    key: d.date,
-    value: +d.temp
-  };
+var test=client.query("select to_char(date,'dd-Mon-YYYY') as date,data from(select cast(t.date as date) as date, avg(t.data) as data from temperature t group by cast(t.date as date) order by cast(t.date as date) asc) as mean");
+test.on("row",function(row,result){
+    result.addRow(row);
 });
+test.on("end",function(result){
+    //console.log(result.rows[0]);
+    for(i=0;i<result.rows.length;i++){
+        //result.rows[i].date.toString();
+        result.rows[i].date=(parseTime(result.rows[i].date));
+        console.log(result.rows[i].date);
+    }
+    console.log(result.rows);
+    const data=result.rows;
+    //console.log(data);
+    //console.log();
+    output('./example/output', d3nLine({ data: data }));
+})
 
 /*const data = d3.tsvParse(tsvString, d => {
   return {
@@ -39,4 +45,4 @@ const tab = (data,d => {
 });
 */
 // create output files
-output('./example/output', d3nLine({ tab: tab }));
+//output('./example/output', d3nLine({ tab: tab }));
