@@ -1,6 +1,10 @@
 var express = require("express");
 let RainbowSDK = require('rainbow-node-sdk');
 var pg=require("pg");
+const fs = require('fs');
+const output = require('d3node-output');
+const d3 = require('d3-node')().d3;
+const d3nLine = require('../');
 var app = express();
 var conString = process.env.DATABASE_URL;
 var password = process.env.password;
@@ -60,8 +64,25 @@ let options = {
         "sendReadReceipt": true   // True to send the 'read' receipt automatically
     }
 };
-
-
+function draw_graph(data,device){
+    var test=client.query("select to_char(date,'dd-Mon-YYYY') as date,data from(select cast(t.date as date) as date, avg(t.data) as data from temperature t group by cast(t.date as date) order by cast(t.date as date) asc) as mean");
+    test.on("row",function(row,result){
+    result.addRow(row);
+    });
+    test.on("end",function(result){
+        //console.log(result.rows[0]);
+        for(i=0;i<result.rows.length;i++){
+            //result.rows[i].date.toString();
+            result.rows[i].date=(parseTime(result.rows[i].date));
+            console.log(result.rows[i].date);
+        }
+        console.log(result.rows);
+        const data=result.rows;
+        //console.log(data);
+        //console.log();
+        output('./example/output', d3nLine({ data: data }));
+    });
+}
 
 function check_temperature(data,device){
     var req=client.query("SELECT * FROM sensors WHERE device='"+device+"'");
