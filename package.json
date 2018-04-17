@@ -12,10 +12,16 @@
   "dependencies": {
     "express": "^4.15.2",
     "pg": "^6.4.1",
-    "rainbow-node-sdk": "^1.34.0"
+    "rainbow-node-sdk": "^1.34.0",
+    "d3-node": "^1.0.3",
+    "d3node-output": "0.0.1",
+    "d3node-linechart": "0.0.7"
   },
   "keywords": [
     "node",
+    "d3",
+    "cli",
+    "linechart",
     "heroku",
     "express"
   ],
