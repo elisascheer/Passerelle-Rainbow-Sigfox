@@ -6,7 +6,7 @@ var conString = process.env.DATABASE_URL;
 var password = process.env.password;
 var client = new pg.Client(conString);
 client.connect();
-client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp not null, device varchar(10) not null,data float not null)");
+client.query("CREATE TABLE IF NOT EXISTS temperature(id serial primary key,date timestamp without time zone not null, device varchar(10) not null,data float not null)");
 client.query("CREATE TABLE IF NOT EXISTS users(jid varchar primary key,name varchar,category varchar(1))");
 client.query("CREATE TABLE IF NOT EXISTS sensors(device varchar primary key,userjid varchar)");
 client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_sensors varchar,constraint fk foreign key (jid) references users(jid),constraint fk_id foreign key (id_sensors) references sensors(device))");
