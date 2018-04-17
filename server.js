@@ -130,7 +130,7 @@ function get_temperature(message){
 function draw_graph(message){
     var bubblejid=message.fromBubbleJid;
     let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
-    var test=client.query("select to_char(date,'dd-Mon-YYYY') as date,data from(select cast(t.date as date) as date, avg(t.data) as data from temperature t group by cast(t.date as date) order by cast(t.date as date) asc) as mean");
+    var test=client.query("SELECT TO_CHAR(date,'dd-Mon-YYYY') AS date,data FROM(SELECT CAST(t.date AS date) AS date, avg(t.data) AS data FROM temperature t JOIN sensors ON sensors.device=temperature.device JOIN users ON ensors.userjid=users.jid GROUP BY CAST(t.date AS date) ORDER BY CAST(t.date AS date) ASC) AS mean");
     test.on("row",function(row,result){
         result.addRow(row);
     });
