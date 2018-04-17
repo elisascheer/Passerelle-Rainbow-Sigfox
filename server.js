@@ -64,25 +64,6 @@ let options = {
         "sendReadReceipt": true   // True to send the 'read' receipt automatically
     }
 };
-function draw_graph(data,device){
-    var test=client.query("select to_char(date,'dd-Mon-YYYY') as date,data from(select cast(t.date as date) as date, avg(t.data) as data from temperature t group by cast(t.date as date) order by cast(t.date as date) asc) as mean");
-    test.on("row",function(row,result){
-    result.addRow(row);
-    });
-    test.on("end",function(result){
-        //console.log(result.rows[0]);
-        for(i=0;i<result.rows.length;i++){
-            //result.rows[i].date.toString();
-            result.rows[i].date=(parseTime(result.rows[i].date));
-            console.log(result.rows[i].date);
-        }
-        console.log(result.rows);
-        const data=result.rows;
-        //console.log(data);
-        //console.log();
-        output('./example/output', d3nLine({ data: data }));
-    });
-}
 
 function check_temperature(data,device){
     var req=client.query("SELECT * FROM sensors WHERE device='"+device+"'");
@@ -143,6 +124,32 @@ function get_temperature(message){
         }
         else {
             messageSent = rainbowSDK.im.sendMessageToBubbleJid("Aucune valeurs enregistrées\n", bubblejid);
+        }
+    });
+}
+function draw_graph(message){
+    var bubblejid=message.fromBubbleJid;
+    let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
+    var test=client.query("select to_char(date,'dd-Mon-YYYY') as date,data from(select cast(t.date as date) as date, avg(t.data) as data from temperature t group by cast(t.date as date) order by cast(t.date as date) asc) as mean");
+    test.on("row",function(row,result){
+        result.addRow(row);
+    });
+    test.on("end",function(result){
+        //console.log(result.rows[0]);
+        if(result.rows.length!=0){
+            for(i=0;i<result.rows.length;i++){
+                //result.rows[i].date.toString();
+                result.rows[i].date=(parseTime(result.rows[i].date));
+                console.log(result.rows[i].date);
+            }
+            console.log(result.rows);
+            const data=result.rows;
+            //console.log(data);
+            //console.log();
+            output('output', d3nLine({ data: data }));
+        }
+        else {
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Aucune valeurs enregistrées pour tracer le graphe\n", bubblejid);
         }
     });
 }
@@ -439,6 +446,9 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         console.log("Message : "+message.content);
         if(chaine=="temp"){
              get_temperature(message);
+        }
+        else if(chaine=="draw_graph"){
+            draw_graph(message);
         }
         else if(chaine.indexOf("stats")==0){
             var arg=chaine.split(" ");
