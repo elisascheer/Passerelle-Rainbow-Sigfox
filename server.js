@@ -420,8 +420,8 @@ function invite_bubble(jid_contact,bubble){
             console.log(contact[i]);
             rainbowSDK.bubbles.inviteContactToBubble(contact[i], bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
                 // do something with the invite sent
-                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("hello je suis le bot", bubble.jid);
-                    console.log("ok");
+                    //messageSent = rainbowSDK.im.sendMessageToBubbleJid("hello je suis le bot", bubble.jid);
+                    console.log("ok invite");
             }).catch(function(err) {
                 // do something if the invitation failed (eg. bad reference to a buble)
                      console.log("fail");
