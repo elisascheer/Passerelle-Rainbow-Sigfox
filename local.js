@@ -241,6 +241,7 @@ function link(split,message){
                                     //let bubbles = rainbowSDK.bubbles.getAll()[1];
                                     //let bubbleid=bubbles.jid;
                                     create_bubble(split[1],message.fromJid,patient);
+
                                     //let contact = rainbowSDK.contacts.getAll();
                                 }
                                 else { //la bulle existe déjà et dans ce cas on l'invite dans la bulle et on l'enregistre dans la bdd
@@ -264,6 +265,7 @@ function link(split,message){
                                                         console.log(bubble_jid);
                                                         console.log(bubble[i]);
                                                         invite_bubble(message.fromJid,bubble[i]);
+                                                        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Bienvenue dans la bulle de suivi du patient "+name+", si vous désirez obtenir des informations, il vous suffit d'écrire 'Bot,' suivi de votre demande, je peux vous fournir sa température, des statistiques. Vous pouvez également placer une ou plusieurs alarmes pour être notifié dès qu'une anomalie sera constatée. ", bubble[i].jid);
                                                         client.query("INSERT INTO link(jid,id_sensors) VALUES ($1,$2)",[message.fromJid,sensor]);
                                                     }
                                                 }
@@ -396,35 +398,40 @@ function list(message){
 invite_bubble*/
 function create_bubble(name,jid_m,jid_p){
     let withHistory = true;
+    let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
+    let sendAnInvite = true;            // To set to false if you want to add someone to a bubble without having to invite him first
+    let inviteReason = "bot-invite";
     rainbowSDK.bubbles.createBubble(name, "A little description of my bubble", withHistory).then(function(bubble) {
     // do something with the bubble created
-        console.log(bubble.jid);
-        //invite_bubble(jid_m,bubble);
-        //invite_bubble(jid_p,bubble);
+        console.log(bubble);
+        console.log(jid_m);
+        invite_bubble(jid_m,bubble);
+        invite_bubble(jid_p,bubble);
         console.log("bubble ok");
+        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Bienvenue dans la bulle de suivi du patient "+name+", si vous désirez obtenir des informations, il vous suffit d'écrire 'Bot,' suivi de votre demande, je peux vous fournir sa température, des statistiques. Vous pouvez également placer une ou plusieurs alarmes pour être notifié dès qu'une anomalie sera constatée. ", bubble.jid);
+
     }).catch(function(err) {
     // do something if the creation of the bubble failed (eg. providing the same name as an existing bubble)
-        console.log("bubble fail");
+        console.log(err);
     });
 
 }
 /*fonction qui invite un contact dans une bulle, prend en paramètre le jid du contact à ajouter et la bulle dans laquelle ajouter le contact*/
 function invite_bubble(jid_contact,bubble){
     let contact=rainbowSDK.contacts.getAll();
-    let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
-    let sendAnInvite = false;            // To set to false if you want to add someone to a bubble without having to invite him first
+    let invitedAsModerator = false;     // To set to true if you want to invite someone as a moderator
+    let sendAnInvite = true;            // To set to false if you want to add someone to a bubble without having to invite him first
     let inviteReason = "bot-invite";
     //console.log(bubble);
     for(i=0;i<contact.length;i++){
         if(contact[i].jid_im==jid_contact){
-            //console.log(contact[i]);
+            console.log(contact[i]);
             rainbowSDK.bubbles.inviteContactToBubble(contact[i], bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
                 // do something with the invite sent
-                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("hello je suis le bot", bubble.jid);
-                    console.log("ok");
+                console.log("invite ok");
             }).catch(function(err) {
                 // do something if the invitation failed (eg. bad reference to a buble)
-                     console.log("fail");
+                console.log(err);
             });
          }
     }
@@ -517,13 +524,6 @@ function list_patients(message){
 // Instantiate the SDK
 let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
-    //console.log(rainbowSDK.bubbles.getBubbleByJid('room_8b7ed282d2884c40ad84c7712091b1e3@muc.sandbox-all-in-one-prod-1.opentouch.cloud'));
-    //console.log(message.fromJid);
-    // test if the message comes from a bubble of from a conversation with one participant
-    //console.log(bubbles);
-    //console.log(message.fromJid);
-    //let contacts=rainbowSDK.contacts.getContactByJid('f623e4d2f80445cca79d90a74bbbf868@sandbox-all-in-one-prod-1.opentouch.cloud');
-    //console.log(contacts);
     var chaine=message.content;
     if(message.type == "chat") {
         // Send the answer to the bubble
