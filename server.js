@@ -539,7 +539,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         }
         else if(chaine.indexOf("Inscription")==0){
             var split=chaine.split(" ");
-            if(split!2) console.log("pas d'arg");
+            if(split!=2) console.log("pas d'arg");
             else Inscription(split,message);
         }
         else if(chaine.indexOf("Medecin")==0){
