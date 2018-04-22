@@ -414,10 +414,10 @@ function invite_bubble(jid_contact,bubble){
     let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
     let sendAnInvite = false;            // To set to false if you want to add someone to a bubble without having to invite him first
     let inviteReason = "bot-invite";
-    //console.log(bubble);
+    console.log(bubble);
     for(i=0;i<contact.length;i++){
         if(contact[i].jid_im==jid_contact){
-            console.log(contact[i]);
+            //console.log(contact[i]);
             rainbowSDK.bubbles.inviteContactToBubble(contact[i], bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
                 // do something with the invite sent
                     //messageSent = rainbowSDK.im.sendMessageToBubbleJid("hello je suis le bot", bubble.jid);
