@@ -256,7 +256,7 @@ function link(split,message){
                                             for(i=0;i<bubble.length;i++){
                                                 console.log(bubble[i]);
                                                 for(j=0;j<bubble[i].users.length;j++){
-                                                    //console.log(bubble[i].users);
+                                                    console.log(bubble[i].users);
                                                     if(bubble[i].users[j].jid_im==patient){
                                                         console.log(bubble[i].users[j].jid_im);
                                                         console.log("je suis dans le if");
