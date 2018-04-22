@@ -399,8 +399,8 @@ function create_bubble(name,jid_m,jid_p){
     rainbowSDK.bubbles.createBubble(name, "A little description of my bubble", withHistory).then(function(bubble) {
     // do something with the bubble created
         console.log(bubble.jid);
-        //invite_bubble(jid_m,bubble);
-        //invite_bubble(jid_p,bubble);
+        invite_bubble(jid_m,bubble);
+        invite_bubble(jid_p,bubble);
         console.log("bubble ok");
     }).catch(function(err) {
     // do something if the creation of the bubble failed (eg. providing the same name as an existing bubble)
