@@ -5,6 +5,10 @@ var app = express();
 var conString = process.env.DATABASE_URL;
 var adminjid = process.env.admin;
 var password = process.env.password;
+const output = require('d3node-output');
+const d3 = require('d3-node')().d3;
+const d3nLine = require('d3node-linechart');
+//const d3nLine = require('/');
 const {Wit, log} = require('node-wit');
 const clientnpm = new Wit({accessToken: 'AQH3W6Q43X7SHWT7AFSH5QPA25WJWOSX'});
 var client = new pg.Client(conString);
@@ -47,7 +51,9 @@ var port = process.env.PORT || 4000;
 app.listen(port, function() {
     console.log("Listening on " + port);
 });
-
+app.get('/', function (req, res) {
+  res.sendFile(__dirname + '/output.html');
+});
 let options = {
     "rainbow": {
         "host": "sandbox",                      // Can be "sandbox" (developer platform), "official" or any other hostname when using dedicated AIO
@@ -69,10 +75,32 @@ let options = {
 
 
 
-/*fonction qui permet de vérifier si une bulle a déjà été crée avec le patient*/
 
-function is_bubble_created(patient_jid){
-
+function draw_graph(message){
+    var bubblejid=message.fromBubbleJid;
+    let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
+    var test=client.query("SELECT TO_CHAR(date,'dd-Mon-YYYY') AS date,data FROM(SELECT CAST(t.date AS date) AS date, avg(t.data) AS data FROM temperature t JOIN sensors ON sensors.device=t.device JOIN users ON sensors.userjid=users.jid GROUP BY CAST(t.date AS date) ORDER BY CAST(t.date AS date) ASC) AS mean");
+    test.on("row",function(row,result){
+        result.addRow(row);
+    });
+    test.on("end",function(result){
+        //console.log(result.rows[0]);
+        if(result.rows.length!=0){
+            for(i=0;i<result.rows.length;i++){
+                //result.rows[i].date.toString();
+                result.rows[i].date=(parseTime(result.rows[i].date));
+                console.log(result.rows[i].date);
+            }
+            console.log(result.rows);
+            const data=result.rows;
+            //console.log(data);
+            //console.log();
+            output('output', d3nLine({ data: data }));
+        }
+        else {
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Aucune valeurs enregistrées pour tracer le graphe\n", bubblejid);
+        }
+    });
 }
 /*fonction qui est appelée lorsqu'un nouveau callback est enregistré, permet de vérfier si une température dépasse une alarme déclarée, prend en paramètre 
 la valeur du capteur et son identifiant*/
