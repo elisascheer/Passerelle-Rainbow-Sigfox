@@ -364,7 +364,6 @@ function warning(message,value){
     });
 
 }
-/*
 function delete_warning(split,message){
     var del=client.query("SELECT * FROM warning WHERE jid='"+message.fromJid+"'");
     del.on("row",function(row,result){
@@ -382,6 +381,7 @@ function delete_warning(split,message){
         }
     });
 }
+/*
 
 function wait_for_response(jid){
     rainbowSDK.events.on('rainbow_onmessagereceived',function(message){
@@ -606,52 +606,52 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         else if(chaine=="list"){
             list(message);
         }
-        else if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
-            clientnpm.message(chaine.substring(4,message.length), {})
-                .then((datawit) => {
-            if (Object.keys(datawit.entities).length == 0) {
-                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
-            }
-            else if(datawit.entities.intent[0].confidence < 0.5){
-                console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
-                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromBubbleJid);
-            }
-            else{
-            	console.log(datawit.entities.intent.length);
-                var value = datawit.entities.intent[0].value;
-                if(value == "Inscription"){
-                    console.log("Objectif : s'inscrire");
-                    var chaine="Inscription"
-                    Inscription(chaine.split(" "),message);
-                }
-                else if(value == "médecin"){
-                    console.log("Objectif : transformer quelqu'un en medecin");
-                    var chaine="Medecin "+datawit.entities.contact[0].value
-                    AddMedecin(chaine.split(" "),message);
-                }
-                else if(value == "lier"){
-                    console.log("Objectif : suivre un patient");
-                    console.log(datawit.entities.contact[0].value);
-                    var chaine="link "+datawit.entities.contact[0].value
-                    check(chaine.split(" "),message);
-                }
-                else if(value == "liste" && datawit.entities.intent.length==2){
-		        var value = datawit.entities.intent[1].value;
-		        if(value == "médecin"){
-		            console.log("Objectif : donner la liste des médecins");
-		            list_medecins(message);
-		        }
-		        else if(value == "patient"){
-		            console.log("Objectif : donner la liste des patients");
-		            list_patients(message);
-		        }
-                }
-            }   
-            }) .catch(console.error);
-	}
         else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Ce n'est pas une commande, veuillez entrer help pour accéder à la liste des commandes disponibles", message.fromJid);
-        }
+            clientnpm.message(message.content, {})
+                .then((datawit) => {
+		    if (Object.keys(datawit.entities).length == 0) {
+		        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
+		    }
+		    else if(datawit.entities.intent[0].confidence < 0.5){
+		        console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
+		        messageSent = rainbowSDK.im.sendMessageToJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromJid);
+		    }
+		    else{
+		    	console.log(datawit.entities.intent.length);
+		        var value = datawit.entities.intent[0].value;
+		        if(value == "Inscription"){
+		            console.log("Objectif : s'inscrire");
+		            var chaine="Inscription"
+		            Inscription(chaine.split(" "),message);
+		        }
+		        else if(value == "médecin"){
+		            console.log("Objectif : transformer quelqu'un en medecin");
+		            var chaine="Medecin "+datawit.entities.contact[0].value
+		            AddMedecin(chaine.split(" "),message);
+		        }
+		        else if(value == "lier"){
+		            console.log("Objectif : suivre un patient");
+		            console.log(datawit.entities.contact[0].value);
+		            var chaine="link "+datawit.entities.contact[0].value
+		            check(chaine.split(" "),message);
+		        }
+		        else if(value == "liste" && datawit.entities.intent.length==2){
+				var value = datawit.entities.intent[1].value;
+				if(value == "médecin"){
+				    console.log("Objectif : donner la liste des médecins");
+				    list_medecins(message);
+				}
+				else if(value == "patient"){
+				    console.log("Objectif : donner la liste des patients");
+				    list_patients(message);
+				}
+		        }
+		    }
+	        }) 
+		.catch( raison => {
+		    messageSent = rainbowSDK.im.sendMessageToJid("Ce n'est pas une commande, veuillez entrer help pour accéder à la liste des commandes disponibles", message.fromJid);
+		})
+	}
     }
 
     else {
@@ -688,60 +688,63 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         else if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
             clientnpm.message(chaine.substring(4,message.length), {})
                 .then((datawit) => {
-            if (Object.keys(datawit.entities).length == 0) {
-                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
-            }
-            else if(datawit.entities.intent[0].confidence < 0.5){
-                console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
-                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromBubbleJid);
-            }
-            else{
-            
-                var value = datawit.entities.intent[0].value;
-                if(value == "température"){
-                    //console.log("Objectif : donner température");
-                    //var chaine="temp"
-                    get_temperature(message);
-                }
-                else if(value == "statistique"){
-                    //console.log("Objectif : donner statistique totale");
-                    var chaine="stats all"
-                    stats(chaine.split(" "),message);
-                }
-                else if(value == "Moyenne"){
-                    //console.log("Objectif : donner moyenne");
-                    var chaine="stats mean"
-                    stats(chaine.split(" "),message);
-                }
-                else if(value == "alarme"){
-                    //console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
-                    warning(jid,datawit.entities.temperature[0].value);
-                }
-                else if(value == "retirer"){
-                    //console.log("Objectif : retirer les warnings");
-                    var chaine="remove warning"
-		    if (Object.keys(datawit.entities.number).length != 0) {
-			for (var i=0; i<datawit.entities.number.length; i++) {
-			    chaine = chaine + " " + datawit.entities.number[i].value;
-			}
+		    if (Object.keys(datawit.entities).length == 0) {
+		        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
 		    }
-		    if (Object.keys(datawit.entities.temperature).length != 0) {
-			for (var i=0; i<datawit.entities.temperature.length; i++) {
-			    chaine = chaine + " " + datawit.entities.temperature[i].value;
-			}
+		    else if(datawit.entities.intent[0].confidence < 0.5){
+		        console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
+		        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromBubbleJid);
 		    }
-                    delete_warning(chaine.split(" "),message);
-                }
-                else if(value == "graphique"){
-                    console.log("Objectif : graphique de temperature");
-                    draw_graph(message);
-                }
-                else if(value == "liste"){
-                    console.log("Objectif : liste des warning");
-                    list(message);
-                }
-            }   
-            }) .catch(console.error);
+		    else{
+		    
+		        var value = datawit.entities.intent[0].value;
+		        if(value == "température"){
+		            //console.log("Objectif : donner température");
+		            //var chaine="temp"
+		            get_temperature(message);
+		        }
+		        else if(value == "statistique"){
+		            //console.log("Objectif : donner statistique totale");
+		            var chaine="stats all"
+		            stats(chaine.split(" "),message);
+		        }
+		        else if(value == "Moyenne"){
+		            //console.log("Objectif : donner moyenne");
+		            var chaine="stats mean"
+		            stats(chaine.split(" "),message);
+		        }
+		        else if(value == "alarme"){
+		            //console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
+		            warning(jid,datawit.entities.temperature[0].value);
+		        }
+		        else if(value == "retirer"){
+		            //console.log("Objectif : retirer les warnings");
+		            var chaine="remove warning"
+			    if (Object.keys(datawit.entities.number).length != 0) {
+				for (var i=0; i<datawit.entities.number.length; i++) {
+				    chaine = chaine + " " + datawit.entities.number[i].value;
+				}
+			    }
+			    if (Object.keys(datawit.entities.temperature).length != 0) {
+				for (var i=0; i<datawit.entities.temperature.length; i++) {
+				    chaine = chaine + " " + datawit.entities.temperature[i].value;
+				}
+			    }
+		            delete_warning(chaine.split(" "),message);
+		        }
+		        else if(value == "graphique"){
+		            //console.log("Objectif : graphique de temperature");
+		            draw_graph(message);
+		        }
+		        else if(value == "liste"){
+		            //console.log("Objectif : liste des warning");
+		            list(message);
+		        }
+		    }   
+                })
+		.catch( raison => {
+		    messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
+		})
 	}
         // send the answer to the user directly otherwise
         console.log("je suis dans la bulle");
