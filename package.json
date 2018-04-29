@@ -21,7 +21,9 @@
     "express-validator": "^5.0.2",
     "node-wit": "^5.0.0",
     "pg": "^6.4.1",
-    "rainbow-node-sdk": "^1.35.2"
+    "rainbow-node-sdk": "^1.35.2",
+    "d3node-output": "0.0.1",
+    "d3node-linechart": "0.0.7"
   },
   "keywords": [
     "node",
