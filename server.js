@@ -341,57 +341,36 @@ function warning(message,value){
     });
 
 }
-/*
-function delete_warning(split,message){
-    var del=client.query("SELECT * FROM warning WHERE jid='"+message.fromJid+"'");
+
+function list_warning(message){
+    var del=client.query("SELECT * FROM warning WHERE bubblejid='"+message.fromBubbleJid+"'");
     del.on("row",function(row,result){
         result.addRow(row);
     });
     del.on("end",function(result){
         //console.log(result.rows);
         if(result.rows.length!=0){
-            messageSent = rainbowSDK.im.sendMessageToJid("Vous avez déclaré la ou les alarme(s) suivante(s) : \n", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Vous avez déclaré la ou les alarme(s) suivante(s) : \n", message.fromJid);
             for(i=0;i<result.rows.length;i++){
-                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].trigger+"°C\n", message.fromJid);
+                messageSent = rainbowSDK.im.sendMessageToBubbleJid(" - "+ result.rows[i].trigger+"°C\n", message.fromBubbleJid);
             }
-            messageSent = rainbowSDK.im.sendMessageToJid("Souhaitez-vous toutes les désactiver? Entrez O pour oui, N <valeur1> <valeur2> pour en désactiver une ou plusieurs\n", message.fromJid);
-            wait_for_response(message.fromJid);
         }
     });
 }
 
-function wait_for_response(jid){
-    rainbowSDK.events.on('rainbow_onmessagereceived',function(message){
-        if(message.content=="O"){
-            client.query("DELETE FROM WARNING WHERE jid='"+message.fromJid+"'");
+function delete_warning(value,message){
+        if(value=="remove warning"){
+            client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"'");
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Les alarmes ont bien été supprimées\n",message.fromBubbleJid);
         }
-        else if(message.content.indexOf("N")==0){
+        /*else if(message.indexOf("remove warning")==0){
             var split=message.content.split(" ");
             console.log(split.length);
             for(i=1;i<split.length;i++){
-                client.query("DELETE FROM WARNING WHERE jid='"+message.fromJid+"' AND trigger="+parseInt(split[i]));
+                client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"' AND trigger="+parseInt(split[i]));
             }
-        }
-    })
+        }*/
 }
-
-function list(message){
-    var search_patient=client.query("SELECT name FROM patients JOIN link ON patients.id=link.id_patients WHERE jid='"+message.fromJid+"'");
-    search_patient.on("row",function(row,result){
-        result.addRow(row);
-    });
-    search_patient.on("end",function(result){
-        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez déclaré aucun patient", message.fromJid);
-        else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Vos patients : ", message.fromJid);
-            for(i=0;i<result.rows.length;i++){
-                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
-        } 
-        }                
-    });
-}
-
-*/
 
 
 /*fonction qui permet de créer une bulle prend en paramètre le nom de la bulle et 2 jid (celui du patient et medecin) puis fait appel à la fonction
@@ -524,6 +503,13 @@ function list_patients(message){
 // Instantiate the SDK
 let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
+    //console.log(rainbowSDK.bubbles.getBubbleByJid('room_8b7ed282d2884c40ad84c7712091b1e3@muc.sandbox-all-in-one-prod-1.opentouch.cloud'));
+    //console.log(message.fromJid);
+    // test if the message comes from a bubble of from a conversation with one participant
+    //console.log(bubbles);
+    //console.log(message.fromJid);
+    //let contacts=rainbowSDK.contacts.getContactByJid('f623e4d2f80445cca79d90a74bbbf868@sandbox-all-in-one-prod-1.opentouch.cloud');
+    //console.log(contacts);
     var chaine=message.content;
     if(message.type == "chat") {
         // Send the answer to the bubble
@@ -570,7 +556,6 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                 }
             }
             /*else if(split[1]=="patient"){
-
             }*/
         }
         else if(chaine.indexOf("lier")==0){
@@ -581,10 +566,53 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         else if(chaine=="list"){
             list(message);
         }
+        else if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
+            clientnpm.message(chaine.substring(4,message.length), {})
+                .then((datawit) => {
+            if (Object.keys(datawit.entities).length == 0) {
+                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
+            }
+            else if(datawit.entities.intent[0].confidence < 0.5){
+                console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
+                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromBubbleJid);
+            }
+            else{
+                console.log(datawit.entities.intent.length);
+                var value = datawit.entities.intent[0].value;
+                if(value == "Inscription"){
+                    console.log("Objectif : s'inscrire");
+                    var chaine="Inscription"
+                    Inscription(chaine.split(" "),message);
+                }
+                else if(value == "médecin"){
+                    console.log("Objectif : transformer quelqu'un en medecin");
+                    var chaine="Medecin "+datawit.entities.contact[0].value
+                    AddMedecin(chaine.split(" "),message);
+                }
+                else if(value == "lier"){
+                    console.log("Objectif : suivre un patient");
+                    console.log(datawit.entities.contact[0].value);
+                    var chaine="link "+datawit.entities.contact[0].value
+                    check(chaine.split(" "),message);
+                }
+                else if(value == "liste" && datawit.entities.intent.length==2){
+                var value = datawit.entities.intent[1].value;
+                if(value == "médecin"){
+                    console.log("Objectif : donner la liste des médecins");
+                    list_medecins(message);
+                }
+                else if(value == "patient"){
+                    console.log("Objectif : donner la liste des patients");
+                    list_patients(message);
+                }
+                }
+            }   
+            }) .catch(console.error);
+    }
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("Ce n'est pas une commande, veuillez entrer help pour accéder à la liste des commandes disponibles", message.fromJid);
         }
-    }
+}
 
     else {
         console.log(message.fromBubbleJid);
@@ -620,8 +648,6 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         else if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
             clientnpm.message(chaine.substring(4,message.length), {})
                 .then((datawit) => {
-            // console.log(datawit);
-            // console.log(Object.keys(datawit.entities).length);
             if (Object.keys(datawit.entities).length == 0) {
                 messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
             }
@@ -633,27 +659,41 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             
                 var value = datawit.entities.intent[0].value;
                 if(value == "température"){
-                    console.log("Objectif : donner température");
-                    var chaine="temp"
+                    //console.log("Objectif : donner température");
+                    //var chaine="temp"
                     get_temperature(message);
                 }
                 else if(value == "statistique"){
-                    console.log("Objectif : donner statistique totale");
+                    //console.log("Objectif : donner statistique totale");
                     var chaine="stats all"
                     stats(chaine.split(" "),message);
                 }
                 else if(value == "Moyenne"){
-                    console.log("Objectif : donner moyenne");
+                    //console.log("Objectif : donner moyenne");
                     var chaine="stats mean"
                     stats(chaine.split(" "),message);
                 }
                 else if(value == "alarme"){
-                    console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
-                            warning(jid,datawit.entities.temperature[0].value);
+                    //console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
+                    warning(jid,datawit.entities.temperature[0].value);
+                }
+                else if(value == "retirer"){
+                    console.log("Objectif : retirer les warnings");
+                    var chaine="remove warning"
+                    delete_warning(chaine,message);
+                }
+                else if(value == "graphique"){
+                    console.log("Objectif : graphique de temperature");
+                    draw_graph(message);
+                }
+                else if(value == "liste"){
+                    console.log("Objectif : liste des warning");
+                    list_warning(message);
                 }
             }   
-                }) .catch(console.error);
+            }) .catch(console.error);
 }
+
         // send the answer to the user directly otherwise
         console.log("je suis dans la bulle");
 
