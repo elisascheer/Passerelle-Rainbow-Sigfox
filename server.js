@@ -80,7 +80,7 @@ let options = {
 function draw_graph(message){
     var bubblejid=message.fromBubbleJid;
     let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
-    var test=client.query("SELECT TO_CHAR(date,'dd-Mon-YYYY') AS date,data FROM(SELECT CAST(t.date AS date) AS date, avg(t.data) AS data FROM temperature t JOIN sensors ON sensors.device=t.device JOIN users ON sensors.userjid=users.jid GROUP BY CAST(t.date AS date) ORDER BY CAST(t.date AS date) ASC) AS mean");
+    var test=client.query("select to_char(date,'dd-Mon-YYYY HH24:MI:SS') as date,data from temperature WHERE device='1B3DEB'");
     test.on("row",function(row,result){
         result.addRow(row);
     });
