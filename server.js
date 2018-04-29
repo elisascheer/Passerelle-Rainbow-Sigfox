@@ -718,8 +718,18 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                     warning(jid,datawit.entities.temperature[0].value);
                 }
                 else if(value == "retirer"){
-                    console.log("Objectif : retirer les warnings");
+                    //console.log("Objectif : retirer les warnings");
                     var chaine="remove warning"
+		    if (Object.keys(datawit.entities.number).length != 0) {
+			for (var i=0; i<datawit.entities.number.length; i++) {
+			    chaine = chaine + " " + datawit.entities.number[i].value;
+			}
+		    }
+		    if (Object.keys(datawit.entities.temperature).length != 0) {
+			for (var i=0; i<datawit.entities.temperature.length; i++) {
+			    chaine = chaine + " " + datawit.entities.temperature[i].value;
+			}
+		    }
                     delete_warning(chaine.split(" "),message);
                 }
                 else if(value == "graphique"){
