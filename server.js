@@ -588,7 +588,7 @@ function draw_graph(message){
             test.on("end",function(result){
                 console.log(result.rows);
                 if(result.rows.length!=0){
-                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("[Graphique]"+process.env.ROOT_URL+"/"+bubblejid+"",bubblejid);
+                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("[Graphique]"+process.env.ROOT_URL+""+bubblejid+"",bubblejid);
                     app.get('/'+bubblejid+'', function (req, res) {
                       res.sendFile(__dirname + '/output.html');
                     });
