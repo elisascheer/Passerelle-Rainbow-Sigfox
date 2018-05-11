@@ -427,32 +427,39 @@ function invite_bubble(jid_contact,bubble){
 
 
 function Inscription(split,message){
-    var search_jid=client.query("SELECT jid FROM users WHERE jid='"+message.fromJid+"'");
-    search_jid.on("row",function(row,result){
-        result.addRow(row);
-    });
-    search_jid.on("end",function(result){
-        if(result.rows.length!=0){
-            messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes déjà inscrit", message.fromJid);  
-        }
-        else {
-            var search_name=client.query("SELECT name FROM users WHERE name='"+split[1]+"'");
-            search_name.on("row",function(row,result){
+    if(split.length!=2){
+        console.log("pas de nom en argument");
+        messageSent = rainbowSDK.im.sendMessageToJid("Pas de nom en argument, veuillez recommencer la procédure", message.fromJid);
+    }
+    else{
+        var search_jid=client.query("SELECT jid FROM users WHERE jid='"+message.fromJid+"'");
+        search_jid.on("row",function(row,result){
             result.addRow(row);
-            });
-            search_name.on("end",function(result){
-                if(result.rows.length!=0){ 
-                    messageSent = rainbowSDK.im.sendMessageToJid("Votre nom est déjà prit, veuillez ajouter la première lettre de votreprenom (ex : eDupont)", message.fromJid);
-                }
-                else {
-                    console.log("Création d'un nouvel utilisateur\n");
-                    var name=split[1];
-                    client.query("INSERT INTO users(jid,name,category) VALUES ($1,$2,$3)",[message.fromJid,name,'P']); 
-                    messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes inscrit en tant que patient, si vous souhaitez devenir médecin veuillez donner votre nom à l'aministrateur", message.fromJid);
-                }   
-            });
-        }
-    });   
+        });
+        search_jid.on("end",function(result){
+            if(result.rows.length!=0){
+                messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes déjà inscrit", message.fromJid);  
+            }
+            else {
+                var search_name=client.query("SELECT name FROM users WHERE name='"+split[1]+"'");
+                search_name.on("row",function(row,result){
+                result.addRow(row);
+                });
+                search_name.on("end",function(result){
+                    if(result.rows.length!=0){ 
+                        messageSent = rainbowSDK.im.sendMessageToJid("Votre nom est déjà prit, veuillez ajouter la première lettre de votreprenom (ex : eDupont)", message.fromJid);
+                    }
+                    else {
+                        console.log("Création d'un nouvel utilisateur\n");
+                        var name=split[1];
+                        client.query("INSERT INTO users(jid,name,category) VALUES ($1,$2,$3)",[message.fromJid,name,'P']); 
+                        messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes inscrit en tant que patient, si vous souhaitez devenir médecin veuillez donner votre nom à l'aministrateur", message.fromJid);
+                    }   
+                });
+            }
+        }); 
+    }
+      
 }
 
 function AddMedecin(split,message){
