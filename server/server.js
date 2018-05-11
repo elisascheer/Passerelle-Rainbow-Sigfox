@@ -817,11 +817,10 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                     //console.log("Objectif : retirer les warnings");
                     var chaine="remove warning"
                     if (datawit.entities.hasOwnProperty('number')) {
-                        if(datawit.entities.number[0].value==1 && datawit.entities.number.length>1){
-                            chaine = chaine + " " + datawit.entities.number[i].value;
-                        }
                         for (var i=0; i<datawit.entities.number.length; i++) {
-                            chaine = chaine + " " + datawit.entities.number[i].value;
+                            if( !(i==0 && datawit.entities.number[0].value==1 && datawit.entities.number.length>1)){
+                                chaine = chaine + " " + datawit.entities.number[i].value;
+                            }
                         }
                     }
                     console.log(chaine);
