@@ -8,7 +8,8 @@ var adminjid = process.env.admin;
 var password = process.env.password;
 const output = require('d3node-output');
 const d3 = require('d3-node')().d3;
-const d3nLine = require('path').join(__dirname, 'd3node-linechart');
+const d3nLine = require('path').resolve(__dirname, './d3node-linechart');
+//path.resolve('/foo/bar', './baz');
 const parseTime = d3.timeParse('%d-%b-%Y %H:%M:%S');
 //const d3nLine = require('./d3node-linechart');
 const {Wit, log} = require('node-wit');
@@ -604,10 +605,6 @@ function draw_graph(message){
             test.on("end",function(result){
                 console.log(result.rows);
                 if(result.rows.length!=0){
-                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("[Graphique]"+process.env.ROOT_URL+""+bubblejid+"",bubblejid);
-                    app.get('/'+bubblejid+'', function (req, res) {
-                      res.sendFile(__dirname + '/output.html');
-                    });
                     for(i=0;i<result.rows.length;i++){
                         result.rows[i].date=(parseTime(result.rows[i].date));
                         console.log(result.rows[i].date);
@@ -617,6 +614,10 @@ function draw_graph(message){
                     const data=result.rows;
                     console.log(data);
                     output('./output', d3nLine({ data: data }));
+                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("[Graphique]"+process.env.ROOT_URL+""+bubblejid+"",bubblejid);
+                    app.get('/'+bubblejid+'', function (req, res) {
+                      res.sendFile(__dirname + '/output.html');
+                    });
 
                 }
                 else{
