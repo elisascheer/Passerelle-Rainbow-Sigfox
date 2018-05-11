@@ -372,6 +372,7 @@ function list_warning(message){
     });
 }
 
+
 function delete_warning(value,message){
         if(value=="remove warning"){
             client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"'");
