@@ -1,64 +1,77 @@
-var express = require("express");
-var pg=require("pg");
-const fs = require('fs');
-const output = require('d3node-output');
-const d3 = require('d3-node')().d3;
-const d3nLine = require('../');
-var conString = process.env.DATABASE_URL;
-var client = new pg.Client(conString);
-client.connect();
-const parseTime = d3.timeParse('%d-%b-%Y %H:%M:%S');
-//console.log(parseTime('06-Apr-2018'));
-var app = express();
-/*code du serveur qui réceptionne les callbacks Sigfox*/
-app.post("/", function(req, res) { 
-    console.log("POST");
-    var body = '';
-    req.on('data', function (data) {
-            body += data;
-            console.log(" " + body);
-    });
-    req.on('end', function () {
-            res.send("Data saved in the database successfully!\n")
-    });
-});
-var test=client.query("select to_char(date,'dd-Mon-YYYY HH24:MI:SS') as date,data from temperature WHERE device='aaaa';");
-//var test=client.query("select to_char(date,'dd-Mon-YYYY') as date,data from(select cast(t.date as date) as date, avg(t.data) as data from temperature t group by cast(t.date as date) order by cast(t.date as date) asc) as mean");
-test.on("row",function(row,result){
-    result.addRow(row);
-});
-test.on("end",function(result){
-    //console.log(result.rows[0]);
-    for(i=0;i<result.rows.length;i++){
-        //result.rows[i].date.toString();
-        console.log(result.rows[0].date);
-        result.rows[i].date=(parseTime(result.rows[i].date));
-        console.log(result.rows[i].date);
-    }
-    console.log(result.rows);
-    const data=result.rows;
-    //console.log(data);
-    //console.log();
-    output('./example/output', d3nLine({ data: data }));
-})
+const D3Node = require('d3-node');
 
-/*const data = d3.tsvParse(tsvString, d => {
-  return {
-    date: parseTime(d.date),
-    data: +d.close
-  };
-});*/
-//console.log(data);
-/*const data=[{"date":"06-Apr-2018","data":40.5},{"date":"07-Apr-2018","data":30.5},{"date":"08-Apr-2018","data":30.5},
-{"date":"10-Apr-2018","data":40.5}];
-// create output files*/
-//output('./example/output', d3nLine({ data: data }));
-app.get('/', function (req, res) {
-  res.sendFile(__dirname + '/output.html');
-});
+function line({
+  data,
+  selector: _selector = '#chart',
+  container: _container = `
+    <div id="container">
+      <h2>Graphe de temperature</h2>
+      <div id="chart"></div>
+    </div>
+  `,
+  style: _style = '',
+  width: _width = 960,
+  height: _height = 500,
+  margin: _margin = { top: 20, right: 20, bottom: 60, left: 30 },
+  lineWidth: _lineWidth = 1.5,
+  lineColor: _lineColor = 'steelblue',
+  isCurve: _isCurve = true,
+  tickSize: _tickSize = 5,
+  tickPadding: _tickPadding = 5,
+} = {}) {
+  const d3n = new D3Node({
+    selector: _selector,
+    svgStyles: _style,
+    container: _container,
+  });
 
-var port = process.env.PORT || 4000;
-app.listen(port, function() {
-    console.log("Listening on " + port);
-});
+  const d3 = d3n.d3;
 
+  const width = _width - _margin.left - _margin.right;
+  const height = _height - _margin.top - _margin.bottom;
+
+  const svg = d3n.createSVG(_width, _height)
+        .append('g')
+        .attr('transform', `translate(${_margin.left}, ${_margin.top})`);
+
+  const g = svg.append('g');
+  // define the x scale (horizontal)
+        var mindate = new Date(2018,0,1),
+            maxdate = new Date(2050,0,31);
+  const xScale = d3.scaleLinear()
+      .rangeRound([0, width]);
+  const yScale = d3.scaleLinear()
+      .rangeRound([height, 0]);
+  const xAxis = d3.axisBottom(xScale)
+        .tickSize(_tickSize)
+        .tickPadding(_tickPadding);
+  const yAxis = d3.axisLeft(yScale)
+        .tickSize(_tickSize)
+        .tickPadding(_tickPadding);
+
+  const lineChart = d3.line()
+      .x(d => xScale(d.date))
+      .y(d => yScale(d.data));
+
+  if (_isCurve) lineChart.curve(d3.curveBasis);
+
+  xScale.domain(d3.extent(data, d => d.date));
+  yScale.domain(d3.extent(data, d => d.data));
+
+  g.append('g')
+    .attr('transform', `translate(0, ${height})`)
+    .call(xAxis);
+
+  g.append('g').call(yAxis);
+
+  g.append('path')
+    .datum(data)
+    .attr('fill', 'none')
+    .attr('stroke', _lineColor)
+    .attr('stroke-width', _lineWidth)
+    .attr('d', lineChart);
+
+  return d3n;
+}
+
+module.exports = line;
