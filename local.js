@@ -2,9 +2,15 @@ var express = require("express");
 let RainbowSDK = require('rainbow-node-sdk');
 var pg=require("pg");
 var app = express();
+const fs = require('fs');
 var conString = process.env.DATABASE_URL;
 var adminjid = process.env.admin;
 var password = process.env.password;
+const output = require('d3node-output');
+const d3 = require('d3-node')().d3;
+const d3nLine = require("path").join(__dirname, "d3node-linechart");
+const parseTime = d3.timeParse('%d-%b-%Y %H:%M:%S');
+//const d3nLine = require('/');
 const {Wit, log} = require('node-wit');
 const clientnpm = new Wit({accessToken: 'AQH3W6Q43X7SHWT7AFSH5QPA25WJWOSX'});
 var client = new pg.Client(conString);
@@ -47,7 +53,6 @@ var port = process.env.PORT || 4000;
 app.listen(port, function() {
     console.log("Listening on " + port);
 });
-
 let options = {
     "rainbow": {
         "host": "sandbox",                      // Can be "sandbox" (developer platform), "official" or any other hostname when using dedicated AIO
@@ -66,14 +71,6 @@ let options = {
     }
 };
 
-
-
-
-/*fonction qui permet de vérifier si une bulle a déjà été crée avec le patient*/
-
-function is_bubble_created(patient_jid){
-
-}
 /*fonction qui est appelée lorsqu'un nouveau callback est enregistré, permet de vérfier si une température dépasse une alarme déclarée, prend en paramètre 
 la valeur du capteur et son identifiant*/
 function check_temperature(data,device){
@@ -251,21 +248,21 @@ function link(split,message){
                                     });
                                     is_link.on("end",function(result){
                                         if(result.rows.length==0){
-                                            //console.log(result.rows);
+                                            console.log(result.rows);
                                             let bubble=rainbowSDK.bubbles.getAll();
                                             console.log(bubble.length);
                                             for(i=0;i<bubble.length;i++){
-                                                console.log(bubble[i]);
+                                                //console.log(bubble[i]);
                                                 for(j=0;j<bubble[i].users.length;j++){
                                                     //console.log(bubble[i].users);
                                                     if(bubble[i].users[j].jid_im==patient){
-                                                        console.log(bubble[i].users[j].jid_im);
-                                                        console.log("je suis dans le if");
+                                                        //console.log(bubble[i].users[j].jid_im);
+                                                       // console.log("je suis dans le if");
                                                         var bubble_jid=bubble[i].jid;
-                                                        console.log(bubble_jid);
-                                                        console.log(bubble[i]);
+                                                        //console.log(bubble_jid);
+                                                        //console.log(bubble[i]);
                                                         invite_bubble(message.fromJid,bubble[i]);
-                                                        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Bienvenue dans la bulle de suivi du patient "+name+", si vous désirez obtenir des informations, il vous suffit d'écrire 'Bot,' suivi de votre demande, je peux vous fournir sa température, des statistiques. Vous pouvez également placer une ou plusieurs alarmes pour être notifié dès qu'une anomalie sera constatée. ", bubble[i].jid);
+                                                        //messageSent = rainbowSDK.im.sendMessageToBubbleJid("Bienvenue dans la bulle de suivi du patient "+bubble[i].name+", si vous désirez obtenir des informations, il vous suffit d'écrire 'Bot,' suivi de votre demande, je peux vous fournir sa température, des statistiques. Vous pouvez également placer une ou plusieurs alarmes pour être notifié dès qu'une anomalie sera constatée. ", bubble[i].jid);
                                                         client.query("INSERT INTO link(jid,id_sensors) VALUES ($1,$2)",[message.fromJid,sensor]);
                                                     }
                                                 }
@@ -300,18 +297,30 @@ function link_device(split,message){
     patient.on("end",function(result){
         if(result.rows.length!=0){
             var userjid=result.rows[0].jid;
-            var device=client.query("SELECT * FROM sensors WHERE device='"+split[2]+"'");
-            device.on("row",function(row,result){
+            var check_link=client.query("SELECT * FROM sensors WHERE userjid='"+userjid+"'");
+            check_link.on("row",function(row,result){
                 result.addRow(row);
             });
-            device.on("end",function(result){
+            check_link.on("end",function(result){
                 if(result.rows.length!=0){
-                    client.query("UPDATE sensors SET userjid='"+userjid+"' WHERE device='"+split[2]+"'");
+                    console.log("patient déjà associé à un capteur");
+                    messageSent = rainbowSDK.im.sendMessageToJid("Le patient est déjà associé à un capteur", message.fromJid);
                 }
-                else {
-                    console.log("le capteur n'existe pas\n");
+                else{
+                    var device=client.query("SELECT * FROM sensors WHERE device='"+split[2]+"'");
+                    device.on("row",function(row,result){
+                        result.addRow(row);
+                    });
+                    device.on("end",function(result){
+                        if(result.rows.length!=0){
+                            client.query("UPDATE sensors SET userjid='"+userjid+"' WHERE device='"+split[2]+"'");
+                        }
+                        else {
+                            console.log("Le capteur n'existe pas\n");
+                        }
+                    });
                 }
-            });
+            })
         }
         else {
             console.log("patient non trouvé\n");
@@ -341,57 +350,36 @@ function warning(message,value){
     });
 
 }
-/*
-function delete_warning(split,message){
-    var del=client.query("SELECT * FROM warning WHERE jid='"+message.fromJid+"'");
+
+function list_warning(message){
+    var del=client.query("SELECT * FROM warning WHERE bubblejid='"+message.fromBubbleJid+"'");
     del.on("row",function(row,result){
         result.addRow(row);
     });
     del.on("end",function(result){
         //console.log(result.rows);
         if(result.rows.length!=0){
-            messageSent = rainbowSDK.im.sendMessageToJid("Vous avez déclaré la ou les alarme(s) suivante(s) : \n", message.fromJid);
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Vous avez déclaré la ou les alarme(s) suivante(s) : \n", message.fromJid);
             for(i=0;i<result.rows.length;i++){
-                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].trigger+"°C\n", message.fromJid);
+                messageSent = rainbowSDK.im.sendMessageToBubbleJid(" - "+ result.rows[i].trigger+"°C\n", message.fromBubbleJid);
             }
-            messageSent = rainbowSDK.im.sendMessageToJid("Souhaitez-vous toutes les désactiver? Entrez O pour oui, N <valeur1> <valeur2> pour en désactiver une ou plusieurs\n", message.fromJid);
-            wait_for_response(message.fromJid);
         }
     });
 }
 
-function wait_for_response(jid){
-    rainbowSDK.events.on('rainbow_onmessagereceived',function(message){
-        if(message.content=="O"){
-            client.query("DELETE FROM WARNING WHERE jid='"+message.fromJid+"'");
+function delete_warning(value,message){
+        if(value=="remove warning"){
+            client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"'");
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Les alarmes ont bien été supprimées\n",message.fromBubbleJid);
         }
-        else if(message.content.indexOf("N")==0){
+        else if(message.indexOf("remove warning")==0){
             var split=message.content.split(" ");
             console.log(split.length);
             for(i=1;i<split.length;i++){
-                client.query("DELETE FROM WARNING WHERE jid='"+message.fromJid+"' AND trigger="+parseInt(split[i]));
+                client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"' AND trigger="+parseInt(split[i]));
             }
         }
-    })
 }
-
-function list(message){
-    var search_patient=client.query("SELECT name FROM patients JOIN link ON patients.id=link.id_patients WHERE jid='"+message.fromJid+"'");
-    search_patient.on("row",function(row,result){
-        result.addRow(row);
-    });
-    search_patient.on("end",function(result){
-        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Vous n'avez déclaré aucun patient", message.fromJid);
-        else {
-            messageSent = rainbowSDK.im.sendMessageToJid("Vos patients : ", message.fromJid);
-            for(i=0;i<result.rows.length;i++){
-                messageSent = rainbowSDK.im.sendMessageToJid(" - "+ result.rows[i].name, message.fromJid);
-        } 
-        }                
-    });
-}
-
-*/
 
 
 /*fonction qui permet de créer une bulle prend en paramètre le nom de la bulle et 2 jid (celui du patient et medecin) puis fait appel à la fonction
@@ -425,7 +413,7 @@ function invite_bubble(jid_contact,bubble){
     //console.log(bubble);
     for(i=0;i<contact.length;i++){
         if(contact[i].jid_im==jid_contact){
-            console.log(contact[i]);
+            //console.log(contact[i]);
             rainbowSDK.bubbles.inviteContactToBubble(contact[i], bubble, invitedAsModerator, sendAnInvite, inviteReason).then(function(bubbleUpdated) {
                 // do something with the invite sent
                 console.log("invite ok");
@@ -510,7 +498,7 @@ function list_patients(message){
         result.addRow(row);
     });
     search_patient.on("end",function(result){
-        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Aucun médecin n'a été déclaré.", message.fromJid);
+        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Aucun patient n'a été déclaré.", message.fromJid);
         else {
             messageSent = rainbowSDK.im.sendMessageToJid("Les patients sont : ", message.fromJid);
             for(i=0;i<result.rows.length;i++){
@@ -520,70 +508,253 @@ function list_patients(message){
     });
 }
 
+function free_sensor(message,name){
+    //vérifier d'abord que le nom se trouve dans la bdd et qu'il est bien relié à un sensor
+    var is_link=client.query("SELECT * FROM users JOIN sensors ON users.jid=sensors.userjid WHERE users.name='"+name[1]+"'");
+    is_link.on("row",function(row,result){
+        result.addRow(row);
+    });
+    is_link.on("end",function(result){
+
+        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Le patient n'est pas enregistré ou il n'est attaché à aucun capteur", message.fromJid);
+        //si le patient n'est relié qu'à un capteur
+        else if(result.rows.length==1){
+            var jid=result.rows[0].jid;
+            messageSent = rainbowSDK.im.sendMessageToJid("Dissociation du capteur réussie, bulle en cours de suppression");
+            delete_bubble(jid,message);
+            var delete_values=client.query("SELECT * from sensors JOIN temperature ON sensors.device=temperature.device WHERE sensors.userjid='"+jid+"'");
+            delete_values.on("row",function(row,result){
+                result.addRow(row);
+            });
+            delete_values.on("end",function(result){
+                if(result.rows.length!=0){
+                    console.log(result.rows);
+                    var sensor=result.rows[0].device;
+                    del_sensor_db(sensor);
+                    client.query("DELETE FROM link WHERE id_sensors='"+sensor+"'");
+
+                }
+            })
+            client.query("UPDATE sensors set userjid=NULL WHERE userjid='"+jid+"'");            
+        }        
+    })
+
+}
+
+
+function del_sensor_db(sensor){
+    client.query("DELETE FROM temperature WHERE device='"+sensor+"'");
+}
+
+function delete_bubble(user_jid,message){
+    var bubble=rainbowSDK.bubbles.getAll();
+    for(i=0;i<bubble.length;i++){
+        console.log(bubble[i]);
+       for(j=0;j<bubble[i].users.length;j++){
+       //console.log(bubble[i].users);
+           if(bubble[i].users[j].jid_im==user_jid){
+             console.log(bubble[i].users[j].jid_im);
+             console.log("suppression de la bulle");
+             rainbowSDK.bubbles.deleteBubble(bubble[i]).then(function() {
+                    // do something once the bubble has been deleted
+                    console.log("bulle supprimée");
+                    messageSent=rainbowSDK.im.sendMessageToJid("Bulle supprimée",message.fromJid);
+             }).catch(function(err) {
+                    // do something if you can't delete the bubble
+                    console.log("pb");
+                    console.log(err);
+             });
+
+            }
+        }
+    }
+}
+
+function draw_graph(message){
+    var bubblejid=message.fromBubbleJid;
+    let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
+    //var test=client.query("select to_char(date,'dd-Mon-YYYY HH24:MI:SS') as date,data from temperature");  /*WHERE device='1B3DEB'");*/
+    //let users=rainbowSDK.bubbles.getBubbleByJid(bubblejid).users;
+    var id_patient=client.query("SELECT * FROM users WHERE name='"+name+"' AND category='P'");
+    id_patient.on("row",function(row,result){
+        result.addRow(row);
+    });
+    id_patient.on("end",function(result){
+        //console.log(result.rows);
+        var patient=result.rows[0].jid;
+        console.log(patient);
+        var search_in_table=client.query("SELECT * FROM sensors WHERE userjid='"+patient+"'");
+        search_in_table.on("row",function(row,result){
+            result.addRow(row);
+        });
+        search_in_table.on("end",function(result){
+            var dev=result.rows[0].device;
+            console.log(dev);
+            var test=client.query("SELECT TO_CHAR(date,'dd-Mon-YYYY HH24:MI:SS') AS date,data FROM temperature WHERE device='"+dev+"';");
+            test.on("row",function(row,result){
+                result.addRow(row);
+            });
+            test.on("end",function(result){
+                console.log(result.rows);
+                if(result.rows.length!=0){
+                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("[Graphique]"+process.env.ROOT_URL+""+bubblejid+"",bubblejid);
+                    app.get('/'+bubblejid+'', function (req, res) {
+                      res.sendFile(__dirname + '/output.html');
+                    });
+                    for(i=0;i<result.rows.length;i++){
+                        result.rows[i].date=(parseTime(result.rows[i].date));
+                        console.log(result.rows[i].date);
+                        //console.log(result.rows[i].data);
+
+                    }
+                    const data=result.rows;
+                    console.log(data);
+                    output('./output', d3nLine({ data: data }));
+
+                }
+                else{
+                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("Aucune valeurs enregistrées pour tracer le graphe\n", bubblejid);
+                }
+            });
+        });
+    });
+}
+
+/*liste les sensors dispo et sensors pris par patients*/
+function list_sensors(message){
+    var list_sensors=client.query("SELECT * FROM sensors");
+    list_sensors.on("row",function(row,result){
+        result.addRow(row);
+    });
+    list_sensors.on("end",function(result){
+        if(result.rows.length!=0){
+            var available_sensors=[];
+            var use_sensors=[];
+            var list_patients=[];
+            for(i=0;i<result.rows.length;i++){
+                if(result.rows[i].userjid==null){
+                    console.log("pas de patient");
+                    available_sensors.push(result.rows[i].device);
+                    console.log(available_sensors);
+                }
+                else{
+                    use_sensors.push(result.rows[i].device);
+                    list_patients.push(result.rows[i].userjid);
+                }
+            }
+            messageSent=rainbowSDK.im.sendMessageToJid("Les sensors disponibles sont : \n", message.fromJid);
+            for(j=0;j<available_sensors.length;j++){
+                messageSent=rainbowSDK.im.sendMessageToJid("-"+available_sensors[j]+"\n", message.fromJid);
+            }
+            if(use_sensors.length==0){
+                messageSent=rainbowSDK.im.sendMessageToJid("Aucun sensors n'est utilisé\n", message.fromJid);
+            }
+            else{
+                var used_sensor=client.query("SELECT * FROM sensors JOIN users ON sensors.userjid=users.jid");
+                used_sensor.on("row",function(row,result){
+                    result.addRow(row);
+                });
+                used_sensor.on("end",function(result){
+                    messageSent=rainbowSDK.im.sendMessageToJid("Les sensors utilisés sont : \n", message.fromJid);
+                    for(k=0;k<result.rows.length;k++){
+                        messageSent=rainbowSDK.im.sendMessageToJid("-"+result.rows[k].device+" utilisé par le patient "+result.rows[k].name+"\n", message.fromJid);
+                    }
+                })
+            }
+        }
+    })
+}
 /*Code principal du bot qui reste en écoute sur les messages reçus de type chat ou groupchat*/
 // Instantiate the SDK
 let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
+    console.log(message.fromJid);
     var chaine=message.content;
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
-        if(chaine=="help"){
-            messageSent = rainbowSDK.im.sendMessageToJid("temp <nom>\nlink <nom>\nlist\nstats <nom> <all,mean...>\nwarning <nom> <valeur>\nremove warning", message.fromJid);
-        }
-        else if(chaine=="list_medecins"){
-            list_medecins(message);
-        }
-        else if(chaine=="list_patients"){
-            list_patients(message);
-        }
-        else if(chaine.indexOf("Inscription")==0){
-            var split=chaine.split(" ");
-            Inscription(split,message);
-        }
-        else if(chaine.indexOf("Medecin")==0){
-            var split=chaine.split(" ");
-            AddMedecin(split,message);
-        }
-        else if(chaine.indexOf("link_patient")==0){ //si on entre la commande link_patient lie un médecin à un patient
+        if(chaine.indexOf("link_device")==0){ //si on entre la commande link_device lie un patient à une antenne
             //link ID name
             var split=chaine.split(" ");
-            if (split.length!=2) messageSent = rainbowSDK.im.sendMessageToJid("usage : link <nom> <identifiant de l'antenne>", message.fromJid);
-            else {
-                check(split,message);
-            }
-        }
-        else if(chaine.indexOf("link_device")==0){ //si on entre la commande link_device lie un patient à une antenne
-            //link ID name
-            var split=chaine.split(" ");
-            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : link_sensor <name> <identifiant de l'antenne>", message.fromJid);
+            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : link_device <nom> <identifiant de l'antenne>", message.fromJid);
             else {
                 link_device(split,message);
             }
         }
-        else if(chaine.indexOf("remove")==0){
+        else if(chaine.indexOf("free_sensor")==0){
+            console.log("dissocier patient-sensor");
             var split=chaine.split(" ");
-            if(split.length!=2)  messageSent = rainbowSDK.im.sendMessageToJid("usage : remove warning", message.fromJid);
-            else {
-                if(split[1]=="warning"){
-                delete_warning(split,message);
-                }
-            }
-            /*else if(split[1]=="patient"){
-
-            }*/
+            if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : free_sensor <nom> <identifiant de l'antenne>", message.fromJid);
+            else free_sensor(message,split);
         }
-        else if(chaine.indexOf("lier")==0){
-            var split=chaine.split(" ");
-            create_bubble(split[1]);
-
-        }
-        else if(chaine=="list"){
-            list(message);
+        else if(chaine=="list_sensors"){
+            console.log("lister les sensors disponibles");
+            list_sensors(message);
         }
         else {
+            clientnpm.message(message.content, {})
+                .then((datawit) => {
+            if (!(datawit.hasOwnProperty('entities'))) {
+                messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
+            }
+            else if(datawit.entities.intent[0].confidence < 0.5){
+                //console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
+                messageSent = rainbowSDK.im.sendMessageToJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromJid);
+            }
+            else{
+                //console.log(datawit.entities.intent.length);
+                var value = datawit.entities.intent[0].value;
+                if(value == "Inscription"){
+                        //console.log("Objectif : s'inscrire");
+                    if(datawit.entities.hasOwnProperty('contact')){
+                        var chaine="Inscription "+datawit.entities.contact[0].value
+                        Inscription(chaine.split(" "),message);
+                    }
+                    else{
+                        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je n'ai pas compris à quel nom vous souhaitez vous inscrire. Pouvez vous reformulez en indiquant clairement votre nom ?", message.fromBubbleJid);
+                    }
+                }
+                else if(value == "médecin"){
+                    //console.log("Objectif : transformer quelqu'un en medecin");
+                    if(datawit.entities.hasOwnProperty('contact')){
+                        var chaine="Medecin "+datawit.entities.contact[0].value
+                        AddMedecin(chaine.split(" "),message);
+                    }
+                    else{
+                        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je n'ai pas compris à qui vous souhaitez définir en tant que médecin. Pouvez vous reformulez en indiquant clairement la personne avec qui vous souhaitez promouvoir ?", message.fromBubbleJid);
+                    }
+                }
+                else if(value == "lier"){
+                    //console.log("Objectif : suivre un patient");
+                    if(datawit.entities.hasOwnProperty('contact')){
+                        var chaine="link "+datawit.entities.contact[0].value
+                        check(chaine.split(" "),message);
+                    }
+                    else{
+                        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je n'ai pas compris à qui vous souhaitez vous lier. Pouvez vous reformulez en indiquant clairement la personne avec qui vous souhaitez vous lier ?", message.fromBubbleJid);
+                    }
+                }
+                else if(value == "liste" && datawit.entities.intent.length==2){
+                    var value = datawit.entities.intent[1].value;
+                    if(value == "médecin"){
+                        //console.log("Objectif : donner la liste des médecins");
+                        list_medecins(message);
+                    }
+                    else if(value == "patient"){
+                        //console.log("Objectif : donner la liste des patients");
+                        list_patients(message);
+                    }
+                    else if(value == "capteur"){
+                        //console.log("Objectif : donner la liste des patients");
+                        list_sensors(message);
+                    }
+                }
+            }
+            }) 
+        .catch( raison => {
             messageSent = rainbowSDK.im.sendMessageToJid("Ce n'est pas une commande, veuillez entrer help pour accéder à la liste des commandes disponibles", message.fromJid);
-        }
+        })
+    }
     }
 
     else {
@@ -591,71 +762,71 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         console.log(rainbowSDK.bubbles.getBubbleByJid(message.fromBubbleJid).users[0].jid_im);
         var jid=message.fromBubbleJid;
         console.log("Message : "+message.content);
-        /*if(chaine=="temp"){
-             get_temperature(message);
-        }
-        else if(chaine.indexOf("stats")==0){
-            var arg=chaine.split(" ");
-            if(arg.length<=1) messageSent = rainbowSDK.im.sendMessageToJid("Il manque des aguments", message.fromJid);
-            if(arg.length==2){
-                stats(arg,message);
-            }
-            else messageSent = rainbowSDK.im.sendMessageToJid("usage : stats <nom> <options>", message.fromJid);    
-        }*/
-        if(chaine=="help"){
-            //messageSent = rainbowSDK.im.sendMessageToJid("temp <nom>\nlink <nom>\nlist\nstats <nom> <all,mean...>\nwarning <nom> <valeur>\nremove warning", message.fromJid);
-        }
-        /*
-        else if(chaine.indexOf("warning")==0){ //commande warning : création d'une nouvelle alerte
-            var split=chaine.split(" ");
-            if (split.length!=2) {
-                //messageSent = rainbowSDK.im.sendMessageToJid("usage : warning <valeur>", message.fromJid);
-            }
-            else {
-                var value=split[1];
-                console.log(value);
-                warning(jid,value);
-            }
-        }*/
-        else if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
+        if(chaine.substring(0,4)=="Bot," || chaine.substring(0,4)=="bot,"){
             clientnpm.message(chaine.substring(4,message.length), {})
                 .then((datawit) => {
-            // console.log(datawit);
-            // console.log(Object.keys(datawit.entities).length);
-            if (Object.keys(datawit.entities).length == 0) {
+        console.log(datawit);
+            if (!(datawit.hasOwnProperty('entities'))) {
+        console.log("ma bite sur ton front");
                 messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistique vis-à-vis de celle-ci ainsi que fixer une alarme.", message.fromBubbleJid);
             }
             else if(datawit.entities.intent[0].confidence < 0.5){
-                console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
+                //console.log("niveau de confidence : " + datawit.entities.intent[0].confidence + "00%");
                 messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne suis pas certain de ce que vous souhaitez, pouvez vous reformuler ?", message.fromBubbleJid);
             }
             else{
-            
                 var value = datawit.entities.intent[0].value;
+        console.log(datawit);
                 if(value == "température"){
-                    console.log("Objectif : donner température");
-                    var chaine="temp"
+                    //console.log("Objectif : donner température");
+                    //var chaine="temp"
                     get_temperature(message);
                 }
                 else if(value == "statistique"){
-                    console.log("Objectif : donner statistique totale");
+                    //console.log("Objectif : donner statistique totale");
                     var chaine="stats all"
                     stats(chaine.split(" "),message);
                 }
                 else if(value == "Moyenne"){
-                    console.log("Objectif : donner moyenne");
+                    //console.log("Objectif : donner moyenne");
                     var chaine="stats mean"
                     stats(chaine.split(" "),message);
                 }
                 else if(value == "alarme"){
-                    console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
-                            warning(jid,datawit.entities.temperature[0].value);
+                    //console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
+                    warning(jid,datawit.entities.temperature[0].value);
+                }
+                else if(value == "retirer"){
+                    //console.log("Objectif : retirer les warnings");
+                    var chaine="remove warning"
+                    if (datawit.entities.hasOwnProperty('number')) {
+                        for (var i=0; i<datawit.entities.number.length; i++) {
+                            console.log("3");
+                            chaine = chaine + " " + datawit.entities.temperature[i].value;
+                        }
+                    }
+                    console.log(chaine);
+                    try {
+                    delete_warning(chaine,message);
+                    }
+                    catch(error) {
+                    messageSent = rainbowSDK.im.sendMessageToBubbleJid("Il est possible que l'alarme que vous souhaitez supprimer n'existe pas, ou alors je n'ai pas compris quelles alarmes vous souhaitez supprimer. Désolé.", message.fromBubbleJid);
+                    }
+                }
+                else if(value == "graphique"){
+                    //console.log("Objectif : graphique de temperature");
+                    draw_graph(message);
+                }
+                else if(value == "liste"){
+                    //console.log("Objectif : liste des warning");
+                    list_warning(message);
                 }
             }   
-                }) .catch(console.error);
-}
-        // send the answer to the user directly otherwise
-        console.log("je suis dans la bulle");
+        })
+        .catch( raison => {
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Je ne comprend pas votre demande. Je peux vous donner la température de votre patient, des données statistiques vis-à-vis de celui-ci ainsi que fixer une alarme.", message.fromBubbleJid);
+        })
+    }
 
     }
 });
