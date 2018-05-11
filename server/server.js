@@ -608,7 +608,7 @@ function draw_graph(message){
                 if(result.rows.length!=0){
                     messageSent = rainbowSDK.im.sendMessageToBubbleJid("[Graphique]"+process.env.ROOT_URL+""+bubblejid+"",bubblejid);
                     app.get('/'+bubblejid+'', function (req, res) {
-                      res.sendFile('../' + 'output.html');
+                      res.sendFile('../output.html');
                     });
                     for(i=0;i<result.rows.length;i++){
                         result.rows[i].date=(parseTime(result.rows[i].date));
