@@ -366,6 +366,9 @@ function list_warning(message){
                 messageSent = rainbowSDK.im.sendMessageToBubbleJid(" - "+ result.rows[i].trigger+"°C\n", message.fromBubbleJid);
             }
         }
+        else {
+            messageSent = rainbowSDK.im.sendMessageToBubbleJid("Aucune alarme déclarée\n", message.fromJid);
+        }
     });
 }
 
@@ -672,6 +675,7 @@ function list_sensors(message){
         }
     })
 }
+
 /*Code principal du bot qui reste en écoute sur les messages reçus de type chat ou groupchat*/
 // Instantiate the SDK
 let rainbowSDK = new RainbowSDK(options);
@@ -801,16 +805,23 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                     stats(chaine.split(" "),message);
                 }
                 else if(value == "alarme"){
-                    //console.log("Objectif : ajouter alarme à " + datawit.entities.temperature[0].value);
-                    warning(jid,datawit.entities.temperature[0].value);
+                    //console.log("Objectif : ajouter une alarme");
+                    if(datawit.entities.number.length > 1 && datawit.entities.number[0].value == 1){
+                        warning(jid,datawit.entities.number[1].value);
+                    }
+                    else{
+                        warning(jid,datawit.entities.number[0].value);
+                    }
                 }
                 else if(value == "retirer"){
                     //console.log("Objectif : retirer les warnings");
                     var chaine="remove warning"
                     if (datawit.entities.hasOwnProperty('number')) {
+                        if(datawit.entities.number[0].value==1 && datawit.entities.number.length>1){
+                            chaine = chaine + " " + datawit.entities.number[i].value;
+                        }
                         for (var i=0; i<datawit.entities.number.length; i++) {
-                            console.log("3");
-                            chaine = chaine + " " + datawit.entities.temperature[i].value;
+                            chaine = chaine + " " + datawit.entities.number[i].value;
                         }
                     }
                     console.log(chaine);
