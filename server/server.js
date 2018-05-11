@@ -378,7 +378,7 @@ function delete_warning(value,message){
             messageSent = rainbowSDK.im.sendMessageToBubbleJid("Les alarmes ont bien été supprimées\n",message.fromBubbleJid);
         }
         else if(message.indexOf("remove warning")==0){
-            var split=message.content.split(" ");
+            var split=value.split(" ");
             console.log(split.length);
             for(i=1;i<split.length;i++){
                 client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"' AND trigger="+parseInt(split[i]));
