@@ -824,7 +824,12 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                         }
                     }
                     console.log(chaine);
-                    delete_warning(chaine,message);
+                    try {
+                        delete_warning(chaine,message);
+                    }
+                    catch(error) {
+                        messageSent = rainbowSDK.im.sendMessageToBubbleJid("Il est possible que l'alarme que vous souhaitez supprimer n'existe pas, ou alors je n'ai pas compris quelles alarmes vous souhaitez supprimer. Désolé.", message.fromBubbleJid);
+                    }
                        // messageSent = rainbowSDK.im.sendMessageToBubbleJid("Il est possible que l'alarme que vous souhaitez supprimer n'existe pas, ou alors je n'ai pas compris quelles alarmes vous souhaitez supprimer. Désolé.", message.fromBubbleJid);
                 }
                 else if(value == "graphique"){
