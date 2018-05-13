@@ -573,7 +573,7 @@ function free_sensor(message,name){
         else{
             messageSent = rainbowSDK.im.sendMessageToJid("Non autorisé",message.fromJid);
         }
-
+    });
 }
 
 
