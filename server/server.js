@@ -292,42 +292,54 @@ function link(split,message){
 
 /*fonction qui permet de lier un device à un patient, prend en argument le nom du patient ainsi que l'objet message reçu*/
 function link_device(split,message){
-    var patient=client.query("SELECT * from users WHERE name='"+split[1]+"' AND category='P'");
-    patient.on("row",function(row,result){
+    var check=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"' AND category='M'");
+    check.on("row",function(row,result){
         result.addRow(row);
     });
-    patient.on("end",function(result){
+    check.on("end",function(result){
         if(result.rows.length!=0){
-            var userjid=result.rows[0].jid;
-            var check_link=client.query("SELECT * FROM sensors WHERE userjid='"+userjid+"'");
-            check_link.on("row",function(row,result){
+            var patient=client.query("SELECT * from users WHERE name='"+split[1]+"' AND category='P'");
+            patient.on("row",function(row,result){
                 result.addRow(row);
             });
-            check_link.on("end",function(result){
+            patient.on("end",function(result){
                 if(result.rows.length!=0){
-                    console.log("patient déjà associé à un capteur");
-                    messageSent = rainbowSDK.im.sendMessageToJid("Le patient est déjà associé à un capteur", message.fromJid);
-                }
-                else{
-                    var device=client.query("SELECT * FROM sensors WHERE device='"+split[2]+"'");
-                    device.on("row",function(row,result){
+                    var userjid=result.rows[0].jid;
+                    var check_link=client.query("SELECT * FROM sensors WHERE userjid='"+userjid+"'");
+                    check_link.on("row",function(row,result){
                         result.addRow(row);
                     });
-                    device.on("end",function(result){
+                    check_link.on("end",function(result){
                         if(result.rows.length!=0){
-                            client.query("UPDATE sensors SET userjid='"+userjid+"' WHERE device='"+split[2]+"'");
+                            console.log("patient déjà associé à un capteur");
+                            messageSent = rainbowSDK.im.sendMessageToJid("Le patient est déjà associé à un capteur", message.fromJid);
                         }
-                        else {
-                            console.log("Le capteur n'existe pas\n");
+                        else{
+                            var device=client.query("SELECT * FROM sensors WHERE device='"+split[2]+"'");
+                            device.on("row",function(row,result){
+                                result.addRow(row);
+                            });
+                            device.on("end",function(result){
+                                if(result.rows.length!=0){
+                                    client.query("UPDATE sensors SET userjid='"+userjid+"' WHERE device='"+split[2]+"'");
+                                }
+                                else {
+                                    console.log("Le capteur n'existe pas\n");
+                                }
+                            });
                         }
-                    });
+                    })
+                }
+                else {
+                    console.log("patient non trouvé\n");
                 }
             })
         }
-        else {
-            console.log("patient non trouvé\n");
+        else{
+            messageSent = rainbowSDK.im.sendMessageToJid("Non autorisé", message.fromJid);
         }
     })
+
 }
 
 
@@ -459,7 +471,7 @@ function Inscription(split,message){
                         console.log("Création d'un nouvel utilisateur\n");
                         var name=split[1];
                         client.query("INSERT INTO users(jid,name,category) VALUES ($1,$2,$3)",[message.fromJid,name,'P']); 
-                        messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes inscrit en tant que patient, si vous souhaitez devenir médecin veuillez donner votre nom à l'aministrateur", message.fromJid);
+                        messageSent = rainbowSDK.im.sendMessageToJid("Vous êtes inscrit en tant que patient, si vous souhaitez devenir médecin veuillez donner votre nom à l'administrateur", message.fromJid);
                     }   
                 });
             }
@@ -522,35 +534,45 @@ function list_patients(message){
 }
 
 function free_sensor(message,name){
-    //vérifier d'abord que le nom se trouve dans la bdd et qu'il est bien relié à un sensor
-    var is_link=client.query("SELECT * FROM users JOIN sensors ON users.jid=sensors.userjid WHERE users.name='"+name[1]+"'");
-    is_link.on("row",function(row,result){
+    var check=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"' AND category='M'");
+    check.on("row",function(row,result){
         result.addRow(row);
     });
-    is_link.on("end",function(result){
-
-        if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Le patient n'est pas enregistré ou il n'est attaché à aucun capteur", message.fromJid);
-        //si le patient n'est relié qu'à un capteur
-        else if(result.rows.length==1){
-            var jid=result.rows[0].jid;
-            messageSent = rainbowSDK.im.sendMessageToJid("Dissociation du capteur réussie, bulle en cours de suppression");
-            delete_bubble(jid,message);
-            var delete_values=client.query("SELECT * from sensors JOIN temperature ON sensors.device=temperature.device WHERE sensors.userjid='"+jid+"'");
-            delete_values.on("row",function(row,result){
+    check.on("end",function(result){
+        if(result.rows.length!=0){
+            //vérifier d'abord que le nom se trouve dans la bdd et qu'il est bien relié à un sensor
+            var is_link=client.query("SELECT * FROM users JOIN sensors ON users.jid=sensors.userjid WHERE users.name='"+name[1]+"'");
+            is_link.on("row",function(row,result){
                 result.addRow(row);
             });
-            delete_values.on("end",function(result){
-                if(result.rows.length!=0){
-                    console.log(result.rows);
-                    var sensor=result.rows[0].device;
-                    del_sensor_db(sensor);
-                    client.query("DELETE FROM link WHERE id_sensors='"+sensor+"'");
+            is_link.on("end",function(result){
 
-                }
+                if(result.rows.length == 0) messageSent = rainbowSDK.im.sendMessageToJid("Le patient n'est pas enregistré ou il n'est attaché à aucun capteur", message.fromJid);
+                //si le patient n'est relié qu'à un capteur
+                else if(result.rows.length==1){
+                    var jid=result.rows[0].jid;
+                    messageSent = rainbowSDK.im.sendMessageToJid("Dissociation du capteur réussie, bulle en cours de suppression",message.fromJid);
+                    delete_bubble(jid,message);
+                    var delete_values=client.query("SELECT * from sensors JOIN temperature ON sensors.device=temperature.device WHERE sensors.userjid='"+jid+"'");
+                    delete_values.on("row",function(row,result){
+                        result.addRow(row);
+                    });
+                    delete_values.on("end",function(result){
+                        if(result.rows.length!=0){
+                            console.log(result.rows);
+                            var sensor=result.rows[0].device;
+                            del_sensor_db(sensor);
+                            client.query("DELETE FROM link WHERE id_sensors='"+sensor+"'");
+
+                        }
+                    })
+                    client.query("UPDATE sensors set userjid=NULL WHERE userjid='"+jid+"'");            
+                }        
             })
-            client.query("UPDATE sensors set userjid=NULL WHERE userjid='"+jid+"'");            
-        }        
-    })
+        } 
+        else{
+            messageSent = rainbowSDK.im.sendMessageToJid("Non autorisé",message.fromJid);
+        }
 
 }
 
@@ -654,11 +676,16 @@ function list_sensors(message){
                     list_patients.push(result.rows[i].userjid);
                 }
             }
-            messageSent=rainbowSDK.im.sendMessageToJid("Les sensors disponibles sont : \n", message.fromJid);
-            for(j=0;j<available_sensors.length;j++){
-                messageSent=rainbowSDK.im.sendMessageToJid("-"+available_sensors[j]+"\n", message.fromJid);
+            if(available_sensors.length!=0){
+                messageSent=rainbowSDK.im.sendMessageToJid("Les sensors disponibles sont : \n", message.fromJid);
+                for(j=0;j<available_sensors.length;j++){
+                    messageSent=rainbowSDK.im.sendMessageToJid("-"+available_sensors[j]+"\n", message.fromJid);
+                }
             }
-            if(use_sensors.length==0){
+            else if(available_sensors.length==0){
+                messageSent=rainbowSDK.im.sendMessageToJid("Aucuns sensors disponible", message.fromJid);
+            }
+            else if(use_sensors.length==0){
                 messageSent=rainbowSDK.im.sendMessageToJid("Aucun sensors n'est utilisé\n", message.fromJid);
             }
             else{
