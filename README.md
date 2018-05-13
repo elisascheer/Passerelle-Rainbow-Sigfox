@@ -9,6 +9,7 @@ Pour déployer ce code il faudrait avoir un compte développeur Rainbow
 Le Bot est hebergé dans la plateforme Heroku
 
 Pour déployer ce code :
+```
 - git clone https://github.com/elisascheer/Passerelle-Rainbow-Sigfox
 - cd Passerelle-Rainbow-Sigfox
 - heroku apps:create [NAME OF YOUR APP]
@@ -20,7 +21,7 @@ Pour déployer ce code :
 - [x] heroku config:set PASS=[MOT DE PASSE DE VOTRE COMPTE DEVLOPPEUR]
 - heroku ps:scale web=1
 - heroku logs --tail
-
+```
 Il est également possible de tester la solution en local : 
  ```
 -git clone https://github.com/elisascheer/Passerelle-Rainbow-Sigfox
@@ -32,8 +33,8 @@ Il est également possible de tester la solution en local :
 Pour pouvoir envoyer des requêtes POST en local : 
 ```
 -curl -X POST http://localhost:4000/  -H "Content-Type:application/json" -d '{"device":"1B3DEB", "data":"39.1"}'
-Architecture globale de la passerelle
 ```
+Architecture globale de la passerelle
 
 ![alt tag](https://cdn.discordapp.com/attachments/369435428706582535/403285199820947476/Architecture.jpg)
 Lien du git pour le code Arduino -> https://github.com/elisascheer/Arduino-Sigfox
