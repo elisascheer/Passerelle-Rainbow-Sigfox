@@ -682,10 +682,10 @@ function list_sensors(message){
                     messageSent=rainbowSDK.im.sendMessageToJid("-"+available_sensors[j]+"\n", message.fromJid);
                 }
             }
-            else if(available_sensors.length==0){
+            /*else if(available_sensors.length==0){
                 messageSent=rainbowSDK.im.sendMessageToJid("Aucuns sensors disponible", message.fromJid);
-            }
-            else if(use_sensors.length==0){
+            }*/
+            if(use_sensors.length==0){
                 messageSent=rainbowSDK.im.sendMessageToJid("Aucun sensors n'est utilisé\n", message.fromJid);
             }
             else{
