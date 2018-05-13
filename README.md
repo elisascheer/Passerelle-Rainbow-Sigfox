@@ -2,7 +2,7 @@
 
 Notre projet ingénieur 2A consiste à établir une passerelle entre les données émises par un objet Sigfox et l'application de chat professionnelle Rainbow.
 
-Le code fournit dans ce git est le code de la gateway, c'est un bot codé en Javascript qui répond aux requêtes des utilisateurs de Rainbow.
+Le code fournit dans ce git est le code de la gateway, c'est un bot/serveur codé en Javascript qui répond aux requêtes des utilisateurs de Rainbow.
 
 Pour déployer ce code il faudrait avoir un compte développeur Rainbow
 
@@ -21,8 +21,13 @@ Pour déployer ce code :
 - heroku ps:scale web=1
 - heroku logs --tail
 
+Il est également possible de tester la solution en local : 
+Pour cela : 
 
-
+-git clone https://github.com/elisascheer/Passerelle-Rainbow-Sigfox
+-cd Passerelle-Rainbow-Sigfox
+-npm install
+-DATABASE_URL=[URL DE LA BDD LOCALE PG] LOG=[ADRESSE MAIL DE VOTRE COMPTE DEVELOPPEUR] PASS=[MDP DU COMPTE DEVELOPPEUR] ROOT_URL=localhost:4000/ admin=[JID ADMIN] node ./server/server.js
 Architecture globale de la passerelle
 ![alt tag](https://cdn.discordapp.com/attachments/369435428706582535/403285199820947476/Architecture.jpg)
 Lien du git pour le code Arduino -> https://github.com/elisascheer/Arduino-Sigfox
