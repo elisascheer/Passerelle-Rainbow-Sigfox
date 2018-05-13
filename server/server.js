@@ -8,11 +8,8 @@ var adminjid = process.env.admin;
 var password = process.env.password;
 const output = require('d3node-output');
 const d3 = require('d3-node')().d3;
-//const d3nLine = require('path').resolve(__dirname, './d3node-linechart');
 const d3nLine = require('../');
-//path.resolve('/foo/bar', './baz');
 const parseTime = d3.timeParse('%d-%b-%Y %H:%M:%S');
-//const d3nLine = require('./d3node-linechart');
 const {Wit, log} = require('node-wit');
 const clientnpm = new Wit({accessToken: 'AQH3W6Q43X7SHWT7AFSH5QPA25WJWOSX'});
 var client = new pg.Client(conString);
@@ -23,7 +20,12 @@ client.query("CREATE TABLE IF NOT EXISTS sensors(device varchar primary key,user
 client.query("CREATE TABLE IF NOT EXISTS link(id serial primary key,jid varchar,id_sensors varchar,constraint fk foreign key (jid) references users(jid),constraint fk_id foreign key (id_sensors) references sensors(device))");
 client.query("CREATE TABLE IF NOT EXISTS warning(bubblejid varchar ,trigger float, primary key(bubblejid,trigger) )");
 
-/*code du serveur qui réceptionne les callbacks Sigfox*/
+/*Code du serveur qui réceptionne les callbacks Sigfox
+Lorsque le serveur va réceptionner une requête POST
+il va l'enregistrer dans la table temperature puis sensors
+Il fait egalement appel à une fonction de contrôle de température en 
+cas du seuil d'alarme franchi*/
+
 app.post("/", function(req, res) { 
     console.log("POST");
     var body = '';
@@ -55,6 +57,9 @@ var port = process.env.PORT || 4000;
 app.listen(port, function() {
     console.log("Listening on " + port);
 });
+
+/* Options necéssaires à la connexion sur la websandbox de Rainbow */
+
 let options = {
     "rainbow": {
         "host": "sandbox",                      // Can be "sandbox" (developer platform), "official" or any other hostname when using dedicated AIO
@@ -73,8 +78,10 @@ let options = {
     }
 };
 
-/*fonction qui est appelée lorsqu'un nouveau callback est enregistré, permet de vérfier si une température dépasse une alarme déclarée, prend en paramètre 
-la valeur du capteur et son identifiant*/
+/*fonction qui est appelée lorsqu'un nouveau callback est enregistré, 
+permet de vérfier si une température dépasse une alarme déclarée, prend en paramètre 
+la valeur relevée par le capteur et son identifiant*/
+
 function check_temperature(data,device){
     var req=client.query("SELECT * FROM sensors WHERE device='"+device+"'");
     req.on("row",function(row,result){
@@ -120,7 +127,9 @@ function check_temperature(data,device){
 }
 
 
-/*fonction qui permet de récupérer la température (la plus récente)*/
+/*fonction qui permet de récupérer la température (la plus récente)
+dans la table temperature, prend en argument le message reçu*/
+
 function get_temperature(message){
     var bubblejid=message.fromBubbleJid;
     let name=rainbowSDK.bubbles.getBubbleByJid(bubblejid).name;
@@ -139,6 +148,10 @@ function get_temperature(message){
         }
     });
 }
+
+
+/*Fonction qui va retourner les statistiques relatives 
+à un capteur donné*/
 
 function stats(arg,message){
     var bubblejid=message.fromBubbleJid;
@@ -181,7 +194,9 @@ function stats(arg,message){
     }
 }
 
-
+/* Fonction appelée lorsqu'un médecin veut se lier à un patient
+On vérifie bien que le demandeur est médecin avant de l'associer
+au patient, sinon on renvoit un message d'erreur*/
 
 function check(split,message){
     var check=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"' AND category='M'");
@@ -196,6 +211,12 @@ function check(split,message){
         else messageSent=rainbowSDK.im.sendMessageToJid("Non autorisé", message.fromJid);
     });
 }
+
+
+/*Fonction appelée lorsqu'un médecin veut se lier à un patient
+Prend en argument le message ainsi que le nom du patient
+On va rechercher les informations (jid) du patient et médecin
+pour les inviter dans une bulle qui aura été créée (ou déjà existante)*/
 function link(split,message){
     console.log("ok");
     var search_name=client.query("SELECT * FROM users WHERE name='"+split[1]+"' AND category='P'");
@@ -290,7 +311,11 @@ function link(split,message){
 }
 
 
-/*fonction qui permet de lier un device à un patient, prend en argument le nom du patient ainsi que l'objet message reçu*/
+/*fonction qui permet de lier un device à un patient,
+ prend en argument le nom du patient ainsi que l'objet message reçu
+ On vérifie bien que le demandeur est médecin pour éxécuter cette fonction,
+ sinon on renvoit un message d'erreur*/
+
 function link_device(split,message){
     var check=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"' AND category='M'");
     check.on("row",function(row,result){
@@ -343,7 +368,9 @@ function link_device(split,message){
 }
 
 
-/*fonction qui permet de déclarer une alarme sur un capteur, prend en paramètre l'objet message et la valeur de l'alarme*/
+/*fonction qui permet de déclarer une alarme sur un capteur, 
+prend en paramètre l'objet message et la valeur de l'alarme*/
+
 function warning(message,value){
     var name=rainbowSDK.bubbles.getBubbleByJid(message).name;
     console.log(message);
@@ -365,6 +392,9 @@ function warning(message,value){
 
 }
 
+
+/* Fonction qui liste les alarmes qui ont été déclarée au sein d'une bulle*/
+
 function list_warning(message){
     var del=client.query("SELECT * FROM warning WHERE bubblejid='"+message.fromBubbleJid+"'");
     del.on("row",function(row,result){
@@ -385,6 +415,11 @@ function list_warning(message){
 }
 
 
+/*Fonction qui permet de supprimer des alarmes
+qui ont été déclarées dans une bulle
+Possible de supprimer toutes les alarmes 
+ou alors une liste d'alarmes*/
+
 function delete_warning(value,message){
         if(value=="remove warning"){
             client.query("DELETE FROM WARNING WHERE bubblejid='"+message.fromBubbleJid+"'");
@@ -400,8 +435,10 @@ function delete_warning(value,message){
 }
 
 
-/*fonction qui permet de créer une bulle prend en paramètre le nom de la bulle et 2 jid (celui du patient et medecin) puis fait appel à la fonction
-invite_bubble*/
+/*fonction qui permet de créer une bulle prend en paramètre 
+le nom de la bulle et 2 jid (celui du patient et medecin) 
+puis fait appel à la fonction
+invite_bubble pour inviter le médecin et patient*/
 function create_bubble(name,jid_m,jid_p){
     let withHistory = true;
     let invitedAsModerator = true;     // To set to true if you want to invite someone as a moderator
@@ -422,7 +459,9 @@ function create_bubble(name,jid_m,jid_p){
     });
 
 }
-/*fonction qui invite un contact dans une bulle, prend en paramètre le jid du contact à ajouter et la bulle dans laquelle ajouter le contact*/
+/*fonction qui invite un contact dans une bulle, prend en paramètre 
+le jid du contact à ajouter et la bulle dans laquelle ajouter le contact*/
+
 function invite_bubble(jid_contact,bubble){
     let contact=rainbowSDK.contacts.getAll();
     let invitedAsModerator = false;     // To set to true if you want to invite someone as a moderator
@@ -443,6 +482,11 @@ function invite_bubble(jid_contact,bubble){
     }
 }
 
+
+
+/*Fonction qui permet à un patient ou un médecin de s'incrire 
+au service medecin-patient. Inscrit tous les demandeurs en tant que patient, 
+nécéssité de contacter l'admin pour être déclaré comme médecin */
 
 function Inscription(split,message){
     if(split.length!=2){
@@ -480,6 +524,12 @@ function Inscription(split,message){
       
 }
 
+
+
+/*Fonction qui permet de déclarer un patient inscrit comme médecin
+en fournissant le nom à déclarer comme médecin
+On vérifie que le jid du demandeur est bien celui de l'admin déclaré au lancement de l'application*/
+
 function AddMedecin(split,message){
     if(message.fromJid==adminjid) {
         var search_name=client.query("SELECT jid FROM users WHERE name='"+split[1]+"'");
@@ -501,6 +551,10 @@ function AddMedecin(split,message){
     }
 }
 
+
+
+/*Fonction qui permet de lister les médecins*/
+
 function list_medecins(message){
     var search_patient=client.query("SELECT name FROM users WHERE category='M'");
     search_patient.on("row",function(row,result){
@@ -517,6 +571,10 @@ function list_medecins(message){
     });
 }
 
+
+
+/*Fonction qui permet de lister les patients*/
+
 function list_patients(message){
     var search_patient=client.query("SELECT name FROM users WHERE category='P'");
     search_patient.on("row",function(row,result){
@@ -532,6 +590,11 @@ function list_patients(message){
         }              
     });
 }
+
+
+/*Fonction qui permet de dissocier un capteur à un patient
+prend en argument le message ainsi que le nom du patient*/
+
 
 function free_sensor(message,name){
     var check=client.query("SELECT * FROM users WHERE jid='"+message.fromJid+"' AND category='M'");
@@ -577,9 +640,14 @@ function free_sensor(message,name){
 }
 
 
+/*suppression dans la table température des valeurs après dissociation du capteur*/
+
 function del_sensor_db(sensor){
     client.query("DELETE FROM temperature WHERE device='"+sensor+"'");
 }
+
+
+/*Fonction qui supprime une bulle lors de la dissociation du capteur au patient*/
 
 function delete_bubble(user_jid,message){
     var bubble=rainbowSDK.bubbles.getAll();
@@ -604,6 +672,10 @@ function delete_bubble(user_jid,message){
         }
     }
 }
+
+
+/*Fonction qui trace le graphe de température d'un patient (dans la bulle)
+Renvoi à l'utilisateur un lien pour afficher le graphique dans une page web */
 
 function draw_graph(message){
     var bubblejid=message.fromBubbleJid;
@@ -654,7 +726,8 @@ function draw_graph(message){
     });
 }
 
-/*liste les sensors dispo et sensors pris par patients*/
+/*liste les sensors disponibles et sensors pris par patients*/
+
 function list_sensors(message){
     var list_sensors=client.query("SELECT * FROM sensors");
     list_sensors.on("row",function(row,result){
@@ -710,6 +783,7 @@ let rainbowSDK = new RainbowSDK(options);
 rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
     console.log(message.fromJid);
     var chaine=message.content;
+    //Si on est dans un chat
     if(message.type == "chat") {
         // Send the answer to the bubble
         console.log("Message : "+message.content);
@@ -727,10 +801,12 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
             if (split.length!=3) messageSent = rainbowSDK.im.sendMessageToJid("usage : free_sensor <nom> <identifiant de l'antenne>", message.fromJid);
             else free_sensor(message,split);
         }
-        else if(chaine=="list_sensors"){
+/*        else if(chaine=="list_sensors"){
             console.log("lister les sensors disponibles");
             list_sensors(message);
         }
+*/
+        //partie gérée par le NLP
         else {
             clientnpm.message(message.content, {})
                 .then((datawit) => {
@@ -785,7 +861,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
                         list_patients(message);
                     }
                     else if(value == "capteur"){
-                        //console.log("Objectif : donner la liste des patients");
+                        //console.log("Objectif : donner la liste des sensors");
                         list_sensors(message);
                     }
                 }
@@ -796,7 +872,7 @@ rainbowSDK.events.on('rainbow_onmessagereceived', function(message) {
         })
     }
     }
-
+    //Si le message reçu provient d'une bulle
     else {
         console.log(message.fromBubbleJid);
         console.log(rainbowSDK.bubbles.getBubbleByJid(message.fromBubbleJid).users[0].jid_im);
