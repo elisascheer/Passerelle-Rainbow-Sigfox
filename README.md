@@ -21,16 +21,19 @@ Pour déployer ce code :
 - heroku ps:scale web=1
 - heroku logs --tail
 
-Il est également possible de tester la solution en local : \\
-
+Il est également possible de tester la solution en local : 
+ ```
 -git clone https://github.com/elisascheer/Passerelle-Rainbow-Sigfox
 -cd Passerelle-Rainbow-Sigfox
 -npm install
 -DATABASE_URL=[URL DE LA BDD LOCALE PG] LOG=[ADRESSE MAIL DE VOTRE COMPTE DEVELOPPEUR] PASS=[MDP DU COMPTE DEVELOPPEUR] ROOT_URL=localhost:4000/ admin=[JID ADMIN] node ./server/server.js
+```
 
-Pour pouvoir envoyer des requêtes POST en local : \\
+Pour pouvoir envoyer des requêtes POST en local : 
+```
 -curl -X POST http://localhost:4000/  -H "Content-Type:application/json" -d '{"device":"1B3DEB", "data":"39.1"}'
 Architecture globale de la passerelle
+```
 
 ![alt tag](https://cdn.discordapp.com/attachments/369435428706582535/403285199820947476/Architecture.jpg)
 Lien du git pour le code Arduino -> https://github.com/elisascheer/Arduino-Sigfox
